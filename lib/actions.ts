@@ -4,9 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { invoiceFingerprint } from '@/lib/invoice-fingerprint';
-import { bookingConfirmationMessage } from '@/lib/messages';
+import { normalizeIndianMobile } from '@/lib/phone-number';
 
-export type ActionState = { error?: string; success?: string; bookingId?: string; whatsappUrl?: string; noSmartphone?: boolean; warning?: string };
+export type ActionState = { error?: string; success?: string; bookingId?: string };
 
 async function requireUser() {
   const supabase = await createClient();
@@ -39,25 +39,24 @@ export async function logoutAction() {
 }
 
 export async function createBookingAction(_: ActionState, formData: FormData): Promise<ActionState> {
-  const { supabase, user } = await requireUser();
+  const { supabase } = await requireUser();
   const customerName = String(formData.get('customer_name') || '').trim();
   const phoneInput = String(formData.get('customer_phone') || '').trim();
-  const phoneDigits = phoneInput.replace(/\D/g, '');
-  const normalizedDigits = phoneDigits.startsWith('0091') ? phoneDigits.slice(2) : phoneDigits;
-  const phone = /^[6-9]\d{9}$/.test(normalizedDigits) ? `91${normalizedDigits}` : normalizedDigits;
+  const phone = normalizeIndianMobile(phoneInput);
   const expected = String(formData.get('expected_arrival_date') || '').trim() || null;
   const notes = String(formData.get('notes') || '').trim();
   const prescriptionVerified = formData.get('prescription_verified') === 'on';
   const advanceText = String(formData.get('advance_amount') || '0').trim();
   const advance = Number(advanceText || 0);
   const method = String(formData.get('advance_method') || 'Cash');
-  const noSmartphone = formData.get('customer_no_smartphone') === 'on';
-  const whatsappOptIn = formData.get('customer_whatsapp_opt_in') === 'on' && !noSmartphone;
   let items: unknown;
-  try { items = JSON.parse(String(formData.get('items_json') || '[]')); } catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
-  if (!/^91[6-9]\d{9}$/.test(phone)) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
+  try { items = JSON.parse(String(formData.get('items_json') || '[]')); }
+  catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
+
+  if (!phone) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
   if (!Number.isFinite(advance) || advance < 0 || advance > 10000000) return { error: 'Advance must be a valid amount of ₹0 or more.' };
   if (!Array.isArray(items) || items.length < 1 || items.length > 20) return { error: 'Add between 1 and 20 medicine lines.' };
+
   const validItems = items.map((item: any) => ({
     product_name: String(item.product_name || '').trim().slice(0,180),
     product_code: String(item.product_code || '').trim().slice(0,100),
@@ -72,6 +71,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   if (validItems.some((item) => !item.product_name || !Number.isFinite(item.requested_quantity) || item.requested_quantity <= 0 || item.requested_quantity > 100000)) {
     return { error: 'Each medicine needs a product name and quantity greater than zero.' };
   }
+
   const { data, error } = await supabase.rpc('create_booking_with_items', {
     p_customer_name: customerName || null,
     p_customer_phone: phone,
@@ -83,50 +83,12 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     p_items: validItems,
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
-  revalidatePath('/dashboard'); revalidatePath('/bookings');
 
-  // The booking itself is already saved atomically. Save communication preferences in
-  // a separate, tightly scoped update so they never become part of the customer-facing URL.
-  const { error: preferenceError } = await supabase.from('bookings')
-    .update({
-      customer_no_smartphone: noSmartphone,
-      customer_whatsapp_opt_in: whatsappOptIn,
-    })
-    .eq('id', String(data))
-    .eq('owner_id', user.id);
-
-  let whatsappUrl: string | undefined;
-  if (whatsappOptIn && !preferenceError) {
-    const [{ data: booking }, { data: settings }] = await Promise.all([
-      supabase.from('bookings').select('booking_code,customer_name,customer_phone,status').eq('id', String(data)).eq('owner_id', user.id).maybeSingle(),
-      supabase.from('shop_settings').select('shop_name,default_footer').eq('owner_id', user.id).maybeSingle(),
-    ]);
-    const message = bookingConfirmationMessage(
-      booking || {
-        booking_code: String(data).slice(0, 8).toUpperCase(),
-        customer_name: customerName || 'Customer',
-        customer_phone: phone,
-        status: 'Awaiting Stock',
-      },
-      validItems,
-      advance,
-      settings?.shop_name || 'Ratan Medical Hall',
-      settings?.default_footer || `Regards,\n${settings?.shop_name || 'Ratan Medical Hall'}`,
-    );
-    const whatsappDigits = phone.replace(/\D/g, '');
-    whatsappUrl = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(message)}`;
-  }
-
-  revalidatePath('/follow-up');
-  return {
-    success: 'Booking has been noted.',
-    bookingId: String(data),
-    whatsappUrl,
-    noSmartphone,
-    ...(preferenceError ? { warning: 'Booking saved, but contact preferences could not be recorded. Apply the pickup scheduler database migration before relying on the follow-up list.' } : {}),
-  };
+  revalidatePath('/dashboard');
+  revalidatePath('/bookings');
+  revalidatePath('/ready');
+  return { success: 'Booking saved successfully.', bookingId: String(data) };
 }
-
 export async function updateBookingStatusAction(formData: FormData) {
   const { supabase } = await requireUser();
   const id = String(formData.get('booking_id') || '');
@@ -328,44 +290,6 @@ export async function createFollowupReminderAction(formData: FormData) {
   redirect('/reminders');
 }
 
-export async function markPhoneFollowupCompletedAction(formData: FormData) {
-  const { supabase, user } = await requireUser();
-  const bookingId = String(formData.get('booking_id') || '');
-  if (!bookingId) redirect('/follow-up');
-
-  const completedAt = new Date().toISOString();
-  const { data: booking, error } = await supabase
-    .from('bookings')
-    .update({
-      phone_followup_completed_at: completedAt,
-      last_contact_at: completedAt,
-      updated_at: completedAt,
-    })
-    .eq('id', bookingId)
-    .eq('owner_id', user.id)
-    .eq('customer_no_smartphone', true)
-    .is('phone_followup_completed_at', null)
-    .select('id,booking_code')
-    .maybeSingle();
-
-  if (error || !booking) redirect('/follow-up?updated=error');
-
-  await supabase.from('booking_events').insert({
-    owner_id: user.id,
-    booking_id: booking.id,
-    event_type: 'phone_followup_completed',
-    summary: 'Shopkeeper completed manual phone follow-up',
-    payload: { channel: 'phone', manually_confirmed: true },
-    actor_user_id: user.id,
-  });
-
-  revalidatePath('/follow-up');
-  revalidatePath('/ready');
-  revalidatePath('/dashboard');
-  revalidatePath('/bookings');
-  revalidatePath('/bookings/' + booking.id);
-  redirect('/follow-up?updated=1');
-}
 
 export async function markWhatsAppOpenedAction(formData: FormData) {
   const { supabase, user } = await requireUser();
