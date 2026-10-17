@@ -84,7 +84,7 @@ export default function BookingForm() {
     }, opened ? 2600 : 6500);
 
     return () => window.clearTimeout(timer);
-  }, [state.bookingId, state.whatsappUrl, state.error]);
+  }, [state]);
 
   const updateLine = (index: number, key: keyof QuickLine, value: string) => {
     setLines((current) => current.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
