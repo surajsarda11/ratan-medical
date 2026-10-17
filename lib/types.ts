@@ -1,0 +1,40 @@
+export type BookingStatus = 'Awaiting Stock' | 'Partially Received' | 'Ready for Pickup' | 'Partially Collected' | 'Completed' | 'Cancelled' | 'Returned / Refunded';
+export type BookingItemInput = {
+  product_name: string;
+  generic_name?: string;
+  strength?: string;
+  dosage_form?: string;
+  brand?: string;
+  pack_size?: string;
+  requested_quantity: number;
+  unit_label: string;
+};
+export type BookingItem = {
+  id: string;
+  booking_id: string;
+  product_name: string;
+  generic_name: string | null;
+  strength: string | null;
+  dosage_form: string | null;
+  brand: string | null;
+  pack_size: string | null;
+  requested_quantity: number;
+  received_quantity: number;
+  collected_quantity: number;
+  unit_label: string;
+  verified_mrp: number | null;
+  mrp_verified: boolean;
+  discount_amount: number;
+};
+export type Booking = {
+  id: string;
+  booking_code: string;
+  customer_name: string | null;
+  customer_phone: string;
+  status: BookingStatus;
+  expected_arrival_date: string | null;
+  next_reminder_at: string | null;
+  last_contact_at: string | null;
+  notes: string | null;
+  created_at: string;
+};
