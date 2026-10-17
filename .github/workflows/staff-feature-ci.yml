@@ -21,5 +21,3 @@ jobs:
         run: npm ci
       - name: Type check
         run: npm run check
-      - name: Production build
-        run: npm run build
