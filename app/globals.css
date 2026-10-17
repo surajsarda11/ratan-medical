@@ -226,3 +226,36 @@ tbody tr:hover { background: #fbfdfb; }
   .quick-booking-main { grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr); }
   .quick-section { padding: 16px; }
 }
+
+
+/* Compact counter preferences and manual phone-follow-up queue */
+.quick-contact-preferences { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.quick-preference-check { display: flex; align-items: flex-start; gap: 10px; border: 1px solid var(--line); border-radius: 11px; padding: 12px 13px; background: #fbfdfb; cursor: pointer; min-width: 0; }
+.quick-preference-check input { margin-top: 3px; accent-color: var(--forest-2); flex: 0 0 auto; width: 16px; height: 16px; }
+.quick-preference-check span { display: grid; gap: 4px; }
+.quick-preference-check strong { color: #2e4c39; font-size: 11px; line-height: 1.45; }
+.quick-preference-check small { color: var(--muted); font-size: 10px; line-height: 1.45; }
+.quick-preference-check input:disabled + span { opacity: .55; }
+.booking-success-warning { display: block; margin-top: 4px; padding: 8px 10px; border-radius: 8px; background: #fff6e4; color: #835b12; font-size: 10px; line-height: 1.5; }
+.phone-followup-list { display: grid; gap: 14px; }
+.phone-followup-card { overflow: hidden; }
+.phone-followup-content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(210px, auto); gap: 18px; align-items: center; }
+.phone-followup-phone { color: var(--forest); font-size: 20px; font-weight: 800; letter-spacing: -.2px; }
+.phone-followup-items { display: grid; gap: 7px; margin-top: 12px; }
+.phone-followup-item { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; border-bottom: 1px solid #edf1ed; padding-bottom: 7px; font-size: 11px; }
+.phone-followup-item:last-child { border-bottom: 0; padding-bottom: 0; }
+.phone-followup-item strong { white-space: nowrap; color: #2d4a37; }
+.phone-followup-actions { display: grid; gap: 8px; align-content: start; }
+.phone-followup-actions form, .phone-followup-actions .btn { width: 100%; }
+.phone-call-button { min-height: 45px; }
+@media (max-width: 850px) {
+  .quick-contact-preferences { grid-template-columns: minmax(0, 1fr); }
+  .phone-followup-content { grid-template-columns: minmax(0, 1fr); }
+  .phone-followup-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .phone-followup-actions form { grid-column: 1 / -1; }
+}
+@media (max-width: 560px) {
+  .phone-followup-actions { grid-template-columns: minmax(0, 1fr); }
+  .phone-followup-actions form { grid-column: auto; }
+  .phone-followup-phone { font-size: 18px; }
+}
