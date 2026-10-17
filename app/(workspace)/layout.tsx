@@ -8,6 +8,7 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
 
   try {
     const supabase = await createClient();
+    supabaseClient = supabase;
     const result = await supabase.auth.getUser();
     if (result.error) {
       // A missing/expired session should go back to login. Other auth errors
