@@ -114,9 +114,9 @@ export async function createStaffBookingAction(_: ActionState, formData: FormDat
 
   const customerName = String(formData.get('customer_name') || '').trim().slice(0, 120);
   const phoneInput = String(formData.get('customer_phone') || '').trim();
-  const phoneDigits = phoneInput.replace(/\\D/g, '');
+  const phoneDigits = phoneInput.replace(/\D/g, '');
   const normalizedDigits = phoneDigits.startsWith('0091') ? phoneDigits.slice(2) : phoneDigits;
-  const phone = /^[6-9]\\d{9}$/.test(normalizedDigits) ? `91${normalizedDigits}` : normalizedDigits;
+  const phone = /^[6-9]\d{9}$/.test(normalizedDigits) ? `91${normalizedDigits}` : normalizedDigits;
   const notes = String(formData.get('notes') || '').trim().slice(0, 500);
   const advanceText = String(formData.get('advance_amount') || '0').trim();
   const advance = Number(advanceText || 0);
@@ -128,7 +128,7 @@ export async function createStaffBookingAction(_: ActionState, formData: FormDat
   try { items = JSON.parse(String(formData.get('items_json') || '[]')); }
   catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
 
-  if (!/^91[6-9]\\d{9}$/.test(phone)) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
+  if (!/^91[6-9]\d{9}$/.test(phone)) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
   if (!Number.isFinite(advance) || advance < 0 || advance > 10000000) return { error: 'Advance must be a valid amount of ₹0 or more.' };
   if (!Array.isArray(items) || items.length < 1 || items.length > 20) return { error: 'Add between 1 and 20 medicine lines.' };
 
@@ -179,7 +179,7 @@ export async function inviteStaffAction(_: ActionState, formData: FormData): Pro
   const displayName = String(formData.get('display_name') || '').trim().slice(0, 100);
   const email = String(formData.get('email') || '').trim().toLowerCase().slice(0, 254);
   if (displayName.length < 1) return { error: 'Enter the staff member name.' };
-  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return { error: 'Enter a valid staff email address.' };
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return { error: 'Enter a valid staff email address.' };
 
   const { data: existing } = await supabase
     .from('staff_memberships')
