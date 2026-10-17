@@ -3,8 +3,8 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import MessageEditor from '@/components/message-editor';
 import { dateTimeLabel, inr, statusClass } from '@/lib/format';
-export default async function SettlementDetailPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{created?:string}>}) {
-  const {id}=await params; const q=await searchParams; const supabase=await createClient();
+export default async function SettlementDetailPage({params}:{params:Promise<{id:string}>}) {
+  const {id}=await params; const supabase=await createClient();
   const {data:settlement}=await supabase.from('settlements').select('*').eq('id',id).maybeSingle();
   if(!settlement)notFound();
   const [{data:booking},{data:settings}]=await Promise.all([
@@ -14,7 +14,6 @@ export default async function SettlementDetailPage({params,searchParams}:{params
   if(!booking)notFound();
   const lines=Array.isArray(settlement.items_json)?settlement.items_json:[];
   return <><div className="page-heading"><div><div className="kicker">SETTLEMENT RECORD</div><h1>Settlement summary</h1><p>{booking.booking_code} · {booking.customer_name||'Customer'} · saved {dateTimeLabel(settlement.created_at)}</p></div><div className="inline-form"><Link href={`/bookings/${booking.id}`} className="btn btn-secondary">← Booking</Link><span className={statusClass(settlement.status)}>{settlement.status}</span></div></div>
-    {q.created==='1'&&<div className="notice" style={{marginBottom:16}}>Settlement saved successfully. The amounts below come from stored verified MRP and receipt quantities. Review the WhatsApp text before sending.</div>}
     <div className="grid-2" style={{alignItems:'start'}}><div className="stack">
       <section className="card"><div className="card-header"><div><div className="card-title">Itemized sale</div><div className="card-description">This is a settlement summary, not a formal tax invoice.</div></div></div><div className="table-wrap"><table><thead><tr><th>Medicine</th><th>Qty</th><th>Verified MRP</th><th>Line total</th></tr></thead><tbody>{lines.map((line:any,index:number)=><tr key={line.item_id||index}><td><div className="table-primary">{line.product_name}</div><div className="table-secondary">{[line.strength,line.dosage_form,line.brand,line.pack_size].filter(Boolean).join(' · ')}</div></td><td>{line.quantity} {line.unit_label}</td><td>{inr(line.mrp)}</td><td><b>{inr(line.amount)}</b></td></tr>)}</tbody></table></div><div className="card-pad"><div className="money-row"><span className="muted">Gross total</span><b>{inr(settlement.gross_total)}</b></div><div className="money-row"><span className="muted">Discount</span><b>− {inr(settlement.discount_total)}</b></div><div className="money-row money-total"><span>Net sale value</span><b>{inr(settlement.net_sale_value)}</b></div><div className="divider"/><div className="money-row"><span className="muted">Advance applied</span><b>− {inr(settlement.advance_applied)}</b></div><div className="money-row"><span className="muted">Additional payment</span><b>− {inr(settlement.additional_payment)}</b></div>{Number(settlement.balance_due)>0&&<div className="money-row"><span>Balance payable</span><b style={{color:'#a6382f'}}>{inr(settlement.balance_due)}</b></div>}{Number(settlement.refund_due)>0&&<div className="money-row"><span>Refund due (not yet paid)</span><b style={{color:'#a6382f'}}>{inr(settlement.refund_due)}</b></div>}</div></section>
       <div className="notice notice-amber">Please verify the item quantities, MRP, discount and customer contact before sending. A WhatsApp link only opens a draft; the message is not sent automatically.</div>
