@@ -1,7 +1,7 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { createBookingAction, type ActionState } from '@/lib/actions';
+import { createBookingAction, markWhatsAppOpenedAction, type ActionState } from '@/lib/actions';
 import { inr } from '@/lib/format';
 
 type QuickLine = { product_name: string; requested_quantity: string };
@@ -15,6 +15,8 @@ export default function BookingForm() {
   const [toastVisible, setToastVisible] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
+  const whatsappWindowRef = useRef<Window | null>(null);
+  const [whatsappOpened, setWhatsappOpened] = useState(false);
   const parsedAdvance = Number(advance || 0);
   const itemsJson = useMemo(
     () =>
@@ -39,18 +41,50 @@ export default function BookingForm() {
   }, []);
 
   useEffect(() => {
-    if (!state.bookingId) return;
+    if (state.error) {
+      if (whatsappWindowRef.current && !whatsappWindowRef.current.closed) {
+        whatsappWindowRef.current.close();
+      }
+      whatsappWindowRef.current = null;
+      return;
+    }
+    if (!state.bookingId || !state.whatsappUrl) return;
+
+    let opened = false;
+    const whatsappWindow = whatsappWindowRef.current;
+    if (whatsappWindow && !whatsappWindow.closed) {
+      try {
+        whatsappWindow.location.href = state.whatsappUrl;
+        whatsappWindow.opener = null;
+        opened = true;
+      } catch {
+        // The visible fallback link below still lets the shopkeeper open the draft.
+      }
+    }
+    whatsappWindowRef.current = null;
+    setWhatsappOpened(opened);
     setToastVisible(true);
+
+    if (opened) {
+      const data = new FormData();
+      data.set('booking_id', state.bookingId);
+      data.set('kind', 'booking_confirmation');
+      void markWhatsAppOpenedAction(data).catch(() => {});
+    }
+
+    // Keep the toast longer when the browser blocked the automatic tab so the fallback is usable.
     const timer = window.setTimeout(() => {
       setToastVisible(false);
       formRef.current?.reset();
       setLines([blankLine()]);
       setAdvance('0');
       setAdvanceMethod('Cash');
+      setWhatsappOpened(false);
       window.requestAnimationFrame(() => phoneRef.current?.focus());
-    }, 2200);
+    }, opened ? 2600 : 6500);
+
     return () => window.clearTimeout(timer);
-  }, [state.bookingId]);
+  }, [state.bookingId, state.whatsappUrl, state.error]);
 
   const updateLine = (index: number, key: keyof QuickLine, value: string) => {
     setLines((current) => current.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
@@ -63,13 +97,45 @@ export default function BookingForm() {
           <div className="booking-success-icon">✓</div>
           <div className="booking-success-copy">
             <strong>Booking has been noted</strong>
-            <span>Saved successfully. Ready for the next customer.</span>
+            <span>
+              {whatsappOpened
+                ? 'WhatsApp draft opened in a new tab. Review it and tap Send; this app will reset for the next customer.'
+                : 'Booking saved. Open the customer confirmation message below, then continue with the next booking.'}
+            </span>
+            {state.whatsappUrl && !whatsappOpened && (
+              <a
+                href={state.whatsappUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={() => {
+                  const data = new FormData();
+                  data.set('booking_id', state.bookingId || '');
+                  data.set('kind', 'booking_confirmation');
+                  void markWhatsAppOpenedAction(data).catch(() => {});
+                }}
+              >
+                ↗ Open WhatsApp message
+              </a>
+            )}
             <a href={'/bookings/' + state.bookingId}>View booking details →</a>
           </div>
         </div>
       )}
 
-      <form ref={formRef} action={action} className="card quick-booking-form">
+      <form
+        ref={formRef}
+        action={action}
+        className="card quick-booking-form"
+        onSubmit={() => {
+          // Pre-open a tab during the user gesture so the browser does not block WhatsApp later.
+          // The tab is navigated only after the server confirms that the booking was saved.
+          try {
+            whatsappWindowRef.current = window.open('about:blank', '_blank');
+          } catch {
+            whatsappWindowRef.current = null;
+          }
+        }}
+      >
         <input type="hidden" name="items_json" value={itemsJson} />
 
         <div className="quick-booking-body">
