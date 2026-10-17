@@ -132,3 +132,92 @@ tbody tr:hover { background: #fbfdfb; }
 @media (max-width: 1120px) { .stats-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } .grid-2 { grid-template-columns: minmax(0,1.3fr) minmax(250px,1fr); } .main-content { padding: 25px 22px 40px; } .topbar { padding: 0 22px; } }
 @media (max-width: 850px) { .sidebar { width: 72px; flex-basis: 72px; padding: 16px 8px; } .brand { padding: 0 4px 20px; justify-content: center; border: 0; } .brand-copy, .nav-caption, .nav-label, .sidebar-user, .logout-label { display: none; } .nav-link { justify-content: center; padding: 12px 5px; } .nav-icon { font-size: 18px; } .logout-button { padding: 10px 5px; font-size: 16px; } .sidebar-bottom { padding: 12px 0 0; } .grid-2 { grid-template-columns: 1fr; } .grid-3 { grid-template-columns: 1fr 1fr; } .login-shell { grid-template-columns: 1fr; } .login-panel { min-height: unset; padding: 35px; } .login-panel h1 { font-size: 38px; margin: 25px 0 12px; } .login-features { grid-template-columns: 1fr 1fr; } .login-form-side { padding: 30px 20px; } }
 @media (max-width: 560px) { .main-content { padding: 22px 14px 35px; } .topbar { height: 62px; padding: 0 14px; } .topbar-title { font-size: 15px; } .topbar-status { font-size: 0; padding: 8px; } .topbar-status .online-dot { margin: 0; } .page-heading { flex-direction: column; margin-bottom: 20px; } .page-heading h1 { font-size: 24px; } .stats-grid { grid-template-columns: 1fr 1fr; gap: 9px; } .stat-card { padding: 13px; } .stat-value { font-size: 22px; margin-top: 13px; } .stat-top { font-size: 10px; align-items: flex-start; } .stat-icon { display: none; } .form-grid, .form-grid-3, .grid-3 { grid-template-columns: 1fr; } .form-section { padding: 16px; } .card-pad { padding: 16px; } .card-header { padding: 15px 16px; } .brand { justify-content: center; } .login-panel { display: none; } .login-form-side { min-height: 100vh; padding: 18px; } .mobile-brand { display: flex; gap: 10px; align-items: center; margin-bottom: 28px; color: var(--forest); } .search-row { align-items: stretch; } .search-row .select { flex: 1; width: 100%; } .sticky-actions { padding: 12px 14px; } }
+
+
+/* Counter-first booking layout */
+.quick-booking-page { max-width: 1080px; margin: 0 auto; }
+.quick-booking-page .page-heading { margin-bottom: 16px; }
+.quick-booking-page .page-heading h1 { font-size: clamp(25px, 2.3vw, 34px); }
+.quick-booking-form { overflow: visible; }
+.quick-booking-body { display: grid; gap: 20px; padding: clamp(18px, 2.5vw, 28px); }
+.quick-phone-field { max-width: 620px; }
+.quick-booking-main { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(280px, .75fr); gap: 22px; align-items: start; }
+.quick-section { min-width: 0; padding: 20px; border: 1px solid var(--line); border-radius: 14px; background: #fff; }
+.quick-section-heading { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 20px; }
+.quick-section-heading h2 { margin: 0; font-size: 16px; letter-spacing: -.2px; color: #1a3a27; }
+.quick-section-heading p { margin: 5px 0 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+.quick-step { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 11px; background: var(--mint); color: var(--forest-2); font-weight: 800; font-size: 14px; }
+.quick-lines { display: grid; gap: 12px; }
+.quick-medicine-row { display: grid; grid-template-columns: minmax(0, 1fr) 112px auto; gap: 12px; align-items: end; }
+.quick-quantity-field { min-width: 0; }
+.quick-remove-line { min-height: 43px; }
+.quick-add-line { margin-top: 14px; min-height: 44px; }
+.quick-helper { margin: 12px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+.quick-advance-input { display: flex; align-items: center; position: relative; }
+.quick-advance-input > span { position: absolute; left: 15px; font-size: 19px; font-weight: 800; color: var(--forest-2); }
+.quick-advance-input .input { min-height: 58px; padding-left: 39px; font-size: 24px; font-weight: 800; color: var(--forest); }
+.quick-advance-shortcuts { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }
+.quick-advance-shortcuts .btn { min-height: 44px; }
+.quick-payment-method { margin-top: 16px; }
+.quick-payment-method .select { min-height: 48px; }
+.quick-advance-summary { display: grid; gap: 7px; background: #f5faf6; border: 1px solid #e2efe5; border-radius: 12px; padding: 15px; margin-top: 18px; }
+.quick-advance-summary span { color: #617267; font-size: 11px; font-weight: 700; }
+.quick-advance-summary strong { color: var(--forest); font-size: 23px; letter-spacing: -.5px; }
+.quick-advance-summary small { color: #6e8074; font-size: 10px; line-height: 1.55; }
+.quick-booking-actions { gap: 12px; }
+.quick-save-button { min-width: 220px; min-height: 48px; font-size: 14px; }
+.booking-success-popup { position: fixed; z-index: 100; top: 22px; left: 50%; transform: translateX(-50%); width: min(460px, calc(100vw - 28px)); display: flex; align-items: flex-start; gap: 13px; padding: 17px 19px; border: 1px solid #c7e4d0; border-radius: 15px; background: #fff; box-shadow: 0 18px 50px #102e1c28; animation: booking-popup-in .18s ease-out; }
+.booking-success-icon { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #fff; background: #21834b; font-size: 18px; font-weight: 800; }
+.booking-success-copy { display: grid; gap: 5px; }
+.booking-success-copy strong { color: #1d472e; font-size: 14px; }
+.booking-success-copy span { color: #64786a; font-size: 11px; line-height: 1.45; }
+.booking-success-copy a { color: #256844; font-size: 11px; font-weight: 800; margin-top: 2px; }
+.device-landing-loading { min-height: 36vh; display: grid; place-items: center; color: var(--muted); font-size: 13px; }
+@keyframes booking-popup-in { from { opacity: 0; translate: 0 -6px; } to { opacity: 1; translate: 0 0; } }
+
+/* The import queue is laptop-oriented: keep the mapping grid broad and the history visible beside it. */
+.csv-import-page { width: 100%; }
+.csv-import-layout { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(310px, .8fr); gap: 22px; align-items: start; }
+.csv-import-layout > div, .csv-import-layout .stack { min-width: 0; }
+.csv-import-form .form-grid-3 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.csv-import-form .form-section { padding: 22px; }
+.csv-import-form .field { min-width: 0; }
+.csv-import-form .select { min-width: 0; }
+.csv-import-form .table-wrap { max-width: 100%; }
+
+@media (max-width: 1450px) {
+  .csv-import-form .form-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+@media (max-width: 1150px) {
+  .csv-import-layout { grid-template-columns: minmax(0, 1fr); }
+  .quick-booking-main { grid-template-columns: minmax(0, 1fr); }
+  .quick-phone-field { max-width: none; }
+}
+@media (min-width: 851px) and (max-width: 1050px) {
+  .sidebar { width: 72px; flex-basis: 72px; padding: 16px 8px; }
+  .brand { padding: 0 4px 20px; justify-content: center; border: 0; }
+  .brand-copy, .nav-caption, .nav-label, .sidebar-user, .logout-label { display: none; }
+  .nav-link { justify-content: center; padding: 12px 5px; }
+  .nav-icon { font-size: 18px; }
+  .logout-button { padding: 10px 5px; font-size: 16px; }
+  .sidebar-bottom { padding: 12px 0 0; }
+}
+@media (max-width: 850px) {
+  .csv-import-form .form-grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .quick-booking-page { max-width: 720px; }
+  .quick-booking-body { gap: 14px; }
+  .quick-section { padding: 16px; }
+  .quick-booking-form .input, .quick-booking-form .select { min-height: 50px; font-size: 16px; }
+  .quick-medicine-row { grid-template-columns: minmax(0, 1fr) 102px; }
+  .quick-remove-line { grid-column: 1 / -1; justify-self: end; }
+  .quick-save-button { flex: 1; min-width: 0; }
+}
+@media (max-width: 560px) {
+  .csv-import-form .form-grid-3 { grid-template-columns: minmax(0, 1fr); }
+  .quick-booking-actions { display: grid; grid-template-columns: 1fr; }
+  .quick-booking-actions > * { width: 100%; }
+  .quick-booking-main { gap: 14px; }
+  .quick-medicine-row { grid-template-columns: minmax(0, 1fr) 88px; gap: 8px; }
+  .quick-booking-body { padding: 14px; }
+  .quick-section { padding: 14px; }
+}
