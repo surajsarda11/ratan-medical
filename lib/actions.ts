@@ -8,10 +8,45 @@ import { createAdminClient } from '@/lib/supabase/admin';
 
 export type ActionState = { error?: string; success?: string; bookingCode?: string; whatsappUrl?: string };
 
-async function requireUser() {
+async function requireAuthenticatedUser() {
   const supabase = await createClient();
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) redirect('/login');
+  return { supabase, user };
+}
+
+async function requireUser() {
+  const { supabase, user } = await requireAuthenticatedUser();
+
+  // Owner-only mutations must reject staff at the server-action boundary.
+  // If the optional staff migration has not been applied, leave the current
+  // owner workflow unchanged.
+  try {
+    const { data: membership, error: membershipError } = await supabase
+      .from('staff_memberships')
+      .select('is_active')
+      .eq('member_user_id', user.id)
+      .maybeSingle();
+
+    if (!membershipError && membership) {
+      if (!membership.is_active) {
+        await supabase.auth.signOut();
+        redirect('/login?access=disabled');
+      }
+      redirect('/staff-booking');
+    }
+  } catch (error) {
+    if (
+      error &&
+      typeof error === 'object' &&
+      'digest' in error &&
+      String((error as { digest?: unknown }).digest).startsWith('NEXT_REDIRECT')
+    ) {
+      throw error;
+    }
+    // Missing migration or temporary lookup failure: retain owner auth flow.
+  }
+
   return { supabase, user };
 }
 
@@ -102,7 +137,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
 }
 
 export async function createStaffBookingAction(_: ActionState, formData: FormData): Promise<ActionState> {
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await requireAuthenticatedUser();
   const { data: membership, error: membershipError } = await supabase
     .from('staff_memberships')
     .select('is_active')
