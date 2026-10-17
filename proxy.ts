@@ -7,6 +7,7 @@ export async function proxy(request: NextRequest) {
   if (!url || !key) return NextResponse.next({ request });
 
   let response = NextResponse.next({ request });
+  let redirectTo: string | null = null;
   try {
     const supabase = createServerClient(url, key, {
       cookies: {
@@ -21,13 +22,50 @@ export async function proxy(request: NextRequest) {
 
     // Supabase auth can throw on network/configuration failures. Do not let a
     // temporary auth failure turn even the public login page into a 500.
-    // Protected workspace routes perform their own authentication check.
-    await supabase.auth.getUser();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: membership, error: membershipError } = await supabase
+        .from('staff_memberships')
+        .select('is_active')
+        .eq('member_user_id', user.id)
+        .maybeSingle();
+
+      // Until the optional migration is applied this lookup fails; in that case
+      // keep the existing owner experience unchanged.
+      if (!membershipError && membership) {
+        if (!membership.is_active) {
+          await supabase.auth.signOut();
+          redirectTo = '/login?access=disabled';
+        } else {
+          const pathname = request.nextUrl.pathname;
+          const staffAllowed = pathname === '/staff-booking'
+            || pathname.startsWith('/staff-booking/')
+            || pathname === '/auth/callback'
+            || pathname.startsWith('/auth/callback/')
+            || pathname === '/set-password'
+            || pathname.startsWith('/set-password/');
+
+          if (pathname === '/' || pathname === '/login') {
+            redirectTo = '/staff-booking';
+          } else if (!staffAllowed) {
+            redirectTo = '/staff-booking';
+          }
+        }
+      }
+    }
   } catch (error) {
     console.error(
       'Supabase session check failed in proxy:',
       error instanceof Error ? error.message : 'Unknown authentication error',
     );
+  }
+
+  if (redirectTo) {
+    const redirectResponse = NextResponse.redirect(new URL(redirectTo, request.url));
+    // Preserve refreshed/sign-out cookies when replacing the normal response
+    // with a staff-mode redirect.
+    response.cookies.getAll().forEach((cookie) => redirectResponse.cookies.set(cookie));
+    return redirectResponse;
   }
 
   return response;
