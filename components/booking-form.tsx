@@ -1,39 +1,236 @@
 'use client';
-import { useMemo, useState } from 'react';
-import { useActionState } from 'react';
+
+import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
 import { createBookingAction, type ActionState } from '@/lib/actions';
 import { inr } from '@/lib/format';
 
-type Line = { product_name:string; product_code:string; generic_name:string; strength:string; dosage_form:string; brand:string; pack_size:string; requested_quantity:string; unit_label:string };
-const blankLine = (): Line => ({ product_name:'',product_code:'',generic_name:'',strength:'',dosage_form:'',brand:'',pack_size:'',requested_quantity:'1',unit_label:'packs' });
+type QuickLine = { product_name: string; requested_quantity: string };
+const blankLine = (): QuickLine => ({ product_name: '', requested_quantity: '1' });
+
 export default function BookingForm() {
   const [state, action, pending] = useActionState(createBookingAction, {} as ActionState);
-  const [lines,setLines] = useState<Line[]>([blankLine()]);
-  const [advance,setAdvance] = useState('0');
-  const [calculatorOpen,setCalculatorOpen] = useState(false);
-  const parsedAdvance = Number(advance||0);
-  const itemsJson = useMemo(()=>JSON.stringify(lines.map((line)=>({...line,requested_quantity:Number(line.requested_quantity)}))),[lines]);
-  const updateLine = (index:number,key:keyof Line,value:string) => setLines((prev)=>prev.map((line,i)=>i===index?{...line,[key]:value}:line));
-  const keypad = (value:string) => setAdvance((old)=>value==='clear'?'0':value==='backspace'?(old.length<=1?'0':old.slice(0,-1)):value==='.'?(old.includes('.')?old:old==='0'?'0.':old+'.'):old==='0'?value:old+value);
-  return <form action={action} onSubmit={(event)=>{if(parsedAdvance>0&&!window.confirm(`Confirm that you received ${inr(parsedAdvance)} as advance for this booking?`)){event.preventDefault();}}} className="card">
-    <div className="form-section"><div className="section-head"><div className="section-number">01</div><div><div className="section-head-title">Customer details</div><div className="section-head-sub">Only collect what is needed to contact the customer about this booking.</div></div></div>
-      <div className="form-grid"><div className="field"><label htmlFor="customer_name">Customer name <span className="muted">(optional)</span></label><input className="input" id="customer_name" name="customer_name" placeholder="e.g. Ramesh Kumar" maxLength={120} /></div><div className="field"><label htmlFor="customer_phone">Mobile number *</label><input className="input" id="customer_phone" name="customer_phone" placeholder="10-digit mobile number" inputMode="tel" required pattern="[+0-9 ()-]{10,20}" /><small>India numbers can be entered with or without +91.</small></div><div className="field"><label htmlFor="expected_arrival_date">Expected arrival date</label><input className="input" id="expected_arrival_date" name="expected_arrival_date" type="date" min={new Date().toISOString().slice(0,10)} /></div><div className="field"><label htmlFor="notes">Booking note <span className="muted">(optional)</span></label><input className="input" id="notes" name="notes" placeholder="Any important order note" maxLength={500} /></div></div>
-    </div>
-    <div className="form-section"><div className="section-head"><div className="section-number">02</div><div><div className="section-head-title">Medicine details</div><div className="section-head-sub">Strength, formulation and pack size define the product. Quantity is recorded separately.</div></div></div>
-      {lines.map((line,index)=><div className="medicine-line" key={index}><div className="medicine-line-title"><span>Medicine {index+1}</span>{lines.length>1&&<button className="btn btn-danger btn-small" type="button" onClick={()=>setLines((prev)=>prev.filter((_,i)=>i!==index))}>Remove</button>}</div>
-        <div className="form-grid-3"><div className="field"><label>Product name *</label><input className="input" value={line.product_name} onChange={(e)=>updateLine(index,'product_name',e.target.value)} placeholder="Medicine / product name" maxLength={180} required /></div><div className="field"><label>Barcode / product code</label><input className="input" value={line.product_code} onChange={(e)=>updateLine(index,'product_code',e.target.value)} placeholder="SKU / barcode if available" maxLength={100} /></div><div className="field"><label>Generic / ingredient</label><input className="input" value={line.generic_name} onChange={(e)=>updateLine(index,'generic_name',e.target.value)} placeholder="If known" maxLength={180} /></div><div className="field"><label>Strength</label><input className="input" value={line.strength} onChange={(e)=>updateLine(index,'strength',e.target.value)} placeholder="e.g. 500 mg" maxLength={80} /></div><div className="field"><label>Dosage form</label><input className="input" value={line.dosage_form} onChange={(e)=>updateLine(index,'dosage_form',e.target.value)} placeholder="Tablet, syrup, cream…" maxLength={80} /></div><div className="field"><label>Brand / manufacturer</label><input className="input" value={line.brand} onChange={(e)=>updateLine(index,'brand',e.target.value)} placeholder="If specified" maxLength={120} /></div><div className="field"><label>Pack size</label><input className="input" value={line.pack_size} onChange={(e)=>updateLine(index,'pack_size',e.target.value)} placeholder="e.g. 10 tablets / strip" maxLength={80} /></div><div className="field"><label>Requested quantity *</label><input className="input" type="number" min="0.001" step="0.001" value={line.requested_quantity} onChange={(e)=>updateLine(index,'requested_quantity',e.target.value)} required /></div><div className="field"><label>Quantity unit</label><select className="select" value={line.unit_label} onChange={(e)=>updateLine(index,'unit_label',e.target.value)}><option value="packs">Packs</option><option value="strips">Strips</option><option value="bottles">Bottles</option><option value="boxes">Boxes</option><option value="tablets">Tablets</option><option value="tubes">Tubes</option><option value="units">Units</option></select></div></div>
-      </div>)}
-      <input type="hidden" name="items_json" value={itemsJson} />
-      <button className="btn btn-secondary" type="button" style={{marginTop:13}} disabled={lines.length>=20} onClick={()=>setLines((prev)=>[...prev,blankLine()])}>＋ Add another medicine</button>
-      <div className="notice notice-amber" style={{marginTop:14}}>Product matching is inventory-only. Do not treat similar names as interchangeable; strength, formulation, brand and pack size should be confirmed by the shopkeeper.</div>
-    </div>
-    <div className="form-section"><div className="section-head"><div className="section-number">03</div><div><div className="section-head-title">Advance payment</div><div className="section-head-sub">Record the actual amount received. It can be any non-negative amount.</div></div></div>
-      <div className="grid-2"><div className="stack" style={{gap:13}}><div className="field"><label htmlFor="advance_amount">Advance received (₹)</label><div style={{display:'flex',gap:8}}><div style={{flex:1,position:'relative'}}><span style={{position:'absolute',left:13,top:11,fontWeight:750,color:'#5b7563'}}>₹</span><input className="input" id="advance_amount" name="advance_amount" type="number" min="0" max="10000000" step="0.01" value={advance} style={{paddingLeft:30,fontSize:18,fontWeight:800}} onChange={(e)=>setAdvance(e.target.value)} /></div><button type="button" className="btn btn-secondary" onClick={()=>setCalculatorOpen((v)=>!v)}>{calculatorOpen?'Hide':'Open'} keypad</button></div></div>
-        <div className="field"><label htmlFor="advance_method">Payment method</label><select className="select" id="advance_method" name="advance_method"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank transfer</option><option>Other</option></select></div>
-        <label className="check-line"><input type="checkbox" name="prescription_verified" /> <span>Prescription / required shopkeeper checks have been verified where applicable.</span></label>
-      </div><div className="card card-pad" style={{background:'#f8fbf8',boxShadow:'none'}}><div className="card-title">Advance summary</div><div className="stat-value" style={{fontSize:30,marginTop:12}}>{inr(Number.isFinite(parsedAdvance)&&parsedAdvance>=0?parsedAdvance:0)}</div><div className="card-description">This payment will be saved as an advance received, not as a final sale or a verified MRP.</div>{calculatorOpen&&<div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:7,marginTop:16}}>{['1','2','3','4','5','6','7','8','9','clear','0','.','backspace'].map((v)=><button type="button" key={v} className="btn btn-secondary" style={{padding:'10px 5px'}} onClick={()=>keypad(v)}>{v==='clear'?'C':v==='backspace'?'⌫':v}</button>)}{[100,200,500,1000].map((v)=><button type="button" key={v} className="btn btn-secondary btn-small" onClick={()=>setAdvance(String(Number(advance||0)+v))}>+₹{v}</button>)}</div>}</div></div>
-    </div>
-    {state.error&&<div style={{padding:'0 21px 18px'}}><div className="error-text">{state.error}</div></div>}
-    <div className="sticky-actions"><a className="btn btn-secondary" href="/bookings">Cancel</a><button className="btn btn-primary" type="submit" disabled={pending}>{pending?'Saving booking…':'Save booking and prepare WhatsApp draft →'}</button></div>
-  </form>;
+  const [lines, setLines] = useState<QuickLine[]>([blankLine()]);
+  const [advance, setAdvance] = useState('0');
+  const [advanceMethod, setAdvanceMethod] = useState('Cash');
+  const [toastVisible, setToastVisible] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+  const phoneRef = useRef<HTMLInputElement>(null);
+  const parsedAdvance = Number(advance || 0);
+  const itemsJson = useMemo(
+    () =>
+      JSON.stringify(
+        lines.map((line) => ({
+          product_name: line.product_name,
+          product_code: '',
+          generic_name: '',
+          strength: '',
+          dosage_form: '',
+          brand: '',
+          pack_size: '',
+          requested_quantity: Number(line.requested_quantity),
+          unit_label: 'packs',
+        })),
+      ),
+    [lines],
+  );
+
+  useEffect(() => {
+    phoneRef.current?.focus();
+  }, []);
+
+  useEffect(() => {
+    if (!state.bookingId) return;
+    setToastVisible(true);
+    const timer = window.setTimeout(() => {
+      setToastVisible(false);
+      formRef.current?.reset();
+      setLines([blankLine()]);
+      setAdvance('0');
+      setAdvanceMethod('Cash');
+      window.requestAnimationFrame(() => phoneRef.current?.focus());
+    }, 2200);
+    return () => window.clearTimeout(timer);
+  }, [state.bookingId]);
+
+  const updateLine = (index: number, key: keyof QuickLine, value: string) => {
+    setLines((current) => current.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
+  };
+
+  return (
+    <>
+      {toastVisible && state.bookingId && (
+        <div className="booking-success-popup" role="status" aria-live="polite">
+          <div className="booking-success-icon">✓</div>
+          <div className="booking-success-copy">
+            <strong>Booking has been noted</strong>
+            <span>Saved successfully. Ready for the next customer.</span>
+            <a href={'/bookings/' + state.bookingId}>View booking details →</a>
+          </div>
+        </div>
+      )}
+
+      <form ref={formRef} action={action} className="card quick-booking-form">
+        <input type="hidden" name="items_json" value={itemsJson} />
+
+        <div className="quick-booking-body">
+          <div className="field quick-phone-field">
+            <label htmlFor="customer_phone">Customer mobile number *</label>
+            <input
+              ref={phoneRef}
+              className="input"
+              id="customer_phone"
+              name="customer_phone"
+              placeholder="10-digit mobile number"
+              type="tel"
+              inputMode="tel"
+              autoComplete="tel"
+              required
+              pattern="[+0-9 ()-]{10,20}"
+              maxLength={20}
+            />
+          </div>
+
+          <div className="quick-booking-main">
+            <section className="quick-section">
+              <div className="quick-section-heading">
+                <span className="quick-step">1</span>
+                <div>
+                  <h2>Medicine / product</h2>
+                  <p>Enter the exact product requested by the customer.</p>
+                </div>
+              </div>
+
+              <div className="quick-lines">
+                {lines.map((line, index) => (
+                  <div className="quick-medicine-row" key={index}>
+                    <div className="field">
+                      <label htmlFor={'product_name_' + index}>
+                        {lines.length > 1 ? 'Product ' + (index + 1) : 'Medicine or product name'} *
+                      </label>
+                      <input
+                        className="input"
+                        id={'product_name_' + index}
+                        value={line.product_name}
+                        onChange={(event) => updateLine(index, 'product_name', event.target.value)}
+                        placeholder="e.g. exact medicine / product name"
+                        maxLength={180}
+                        autoComplete="off"
+                        required
+                      />
+                    </div>
+                    <div className="field quick-quantity-field">
+                      <label htmlFor={'quantity_' + index}>Quantity *</label>
+                      <input
+                        className="input"
+                        id={'quantity_' + index}
+                        type="number"
+                        min="1"
+                        max="100000"
+                        step="1"
+                        inputMode="numeric"
+                        value={line.requested_quantity}
+                        onChange={(event) => updateLine(index, 'requested_quantity', event.target.value)}
+                        required
+                      />
+                    </div>
+                    {index > 0 && (
+                      <button
+                        className="btn btn-secondary quick-remove-line"
+                        type="button"
+                        aria-label={'Remove product ' + (index + 1)}
+                        onClick={() => setLines((current) => current.filter((_, i) => i !== index))}
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <button
+                className="btn btn-secondary quick-add-line"
+                type="button"
+                disabled={lines.length >= 20}
+                onClick={() => setLines((current) => [...current, blankLine()])}
+              >
+                ＋ Add another medicine (optional)
+              </button>
+              <p className="quick-helper">
+                Medicine identity matters. Confirm the name, strength and pack with the customer where needed.
+              </p>
+            </section>
+
+            <section className="quick-section quick-advance-section">
+              <div className="quick-section-heading">
+                <span className="quick-step">2</span>
+                <div>
+                  <h2>Advance paid</h2>
+                  <p>Enter the amount actually received from the customer.</p>
+                </div>
+              </div>
+
+              <div className="field">
+                <label htmlFor="advance_amount">Advance amount (₹)</label>
+                <div className="quick-advance-input">
+                  <span aria-hidden="true">₹</span>
+                  <input
+                    className="input"
+                    id="advance_amount"
+                    name="advance_amount"
+                    type="number"
+                    min="0"
+                    max="10000000"
+                    step="0.01"
+                    inputMode="decimal"
+                    value={advance}
+                    onChange={(event) => setAdvance(event.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="quick-advance-shortcuts" aria-label="Quick advance amount">
+                <button type="button" className="btn btn-secondary" onClick={() => setAdvance('0')}>₹0</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setAdvance('100')}>₹100</button>
+                <button type="button" className="btn btn-secondary" onClick={() => setAdvance('500')}>₹500</button>
+              </div>
+
+              {parsedAdvance > 0 && (
+                <div className="field quick-payment-method">
+                  <label htmlFor="advance_method">Payment method *</label>
+                  <select
+                    className="select"
+                    id="advance_method"
+                    name="advance_method"
+                    value={advanceMethod}
+                    onChange={(event) => setAdvanceMethod(event.target.value)}
+                  >
+                    <option value="Cash">Cash</option>
+                    <option value="UPI">UPI</option>
+                    <option value="Card">Card</option>
+                    <option value="Bank transfer">Bank transfer</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              )}
+
+              <div className="quick-advance-summary">
+                <span>Advance to record</span>
+                <strong>{inr(Number.isFinite(parsedAdvance) && parsedAdvance >= 0 ? parsedAdvance : 0)}</strong>
+                <small>The advance is recorded against this booking, not as a completed sale.</small>
+              </div>
+            </section>
+          </div>
+
+          {state.error && <div className="error-text" role="alert">{state.error}</div>}
+        </div>
+
+        <div className="sticky-actions quick-booking-actions">
+          <a className="btn btn-secondary" href="/bookings">All bookings</a>
+          <button className="btn btn-primary quick-save-button" type="submit" disabled={pending}>
+            {pending ? 'Saving booking…' : '✓ Save booking'}
+          </button>
+        </div>
+      </form>
+    </>
+  );
 }
