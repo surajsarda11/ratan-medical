@@ -6,8 +6,8 @@ import { dateLabel, dateTimeLabel, inr, statusClass } from '@/lib/format';
 import { bookingConfirmationMessage } from '@/lib/messages';
 import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
 
-export default async function BookingDetailPage({ params, searchParams }: { params: Promise<{id:string}>; searchParams: Promise<{created?:string;payment?:string;mrp?:string;status?:string}> }) {
-  const { id } = await params; const query = await searchParams;
+export default async function BookingDetailPage({ params }: { params: Promise<{id:string}> }) {
+  const { id } = await params;
   const supabase = await createClient();
   const [{ data: booking }, { data: items }, { data: payments }, { data: settlements }, { data: events }, { data: reminders }, { data: settings }] = await Promise.all([
     supabase.from('bookings').select('*').eq('id',id).maybeSingle(),
@@ -29,9 +29,6 @@ export default async function BookingDetailPage({ params, searchParams }: { para
   const contactWasOpened = (events||[]).some((event:any)=>event.event_type==='whatsapp_draft_opened');
   return <>
     <div className="page-heading"><div><div className="kicker">BOOKING DETAIL / {booking.booking_code}</div><h1>{booking.customer_name || 'Customer booking'}</h1><p>{booking.customer_phone} · Created {dateTimeLabel(booking.created_at)} · Booking ID {booking.booking_code}</p></div><div className="inline-form"><Link href="/bookings" className="btn btn-secondary">← All bookings</Link><Link href={`/bookings/${id}/settlement`} className="btn btn-primary">Record pickup / settlement →</Link></div></div>
-    {query.created==='1'&&<div className="notice" style={{marginBottom:16}}>Booking saved. The advance, if any, is in the payment history. Review the confirmation draft before sending it to the customer.</div>}
-    {query.payment==='saved'&&<div className="success-text" style={{marginBottom:16}}>Payment record saved.</div>}{query.payment==='error'&&<div className="error-text" style={{marginBottom:16}}>Payment could not be saved. Please retry.</div>}
-    {query.mrp==='saved'&&<div className="success-text" style={{marginBottom:16}}>Verified MRP updated and recorded in the timeline.</div>}{query.mrp==='error'&&<div className="error-text" style={{marginBottom:16}}>MRP was not updated. Enter a valid MRP and confirm verification.</div>}{query.status==='needs_stock'&&<div className="error-text" style={{marginBottom:16}}>This booking cannot be marked Ready for Pickup until every requested unit is received and validated.</div>}{query.status==='needs_pickup'&&<div className="error-text" style={{marginBottom:16}}>This booking cannot be marked Completed until all requested units are recorded as collected.</div>}{query.status==='error'&&<div className="error-text" style={{marginBottom:16}}>Status was not updated. Please retry.</div>}
     <div className="grid-2" style={{alignItems:'start'}}>
       <div className="stack">
         <section className="card">
