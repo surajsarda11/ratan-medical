@@ -242,8 +242,10 @@ export async function updateImportRowAction(formData: FormData) {
   const { data: row } = await supabase.from('purchase_import_rows').select('allocated_quantity').eq('id',rowId).eq('owner_id',user.id).maybeSingle();
   if (!row) redirect('/imports');
   if (status === 'Ignored' && Number(row.allocated_quantity||0)>0) redirect(`/imports/${importId}?review=partial`);
-  await supabase.from('purchase_import_rows').update({ review_status: status, review_note: status === 'Ignored' ? 'Ignored by shopkeeper; no stock posted' : null }).eq('id',rowId).eq('owner_id',user.id);
+  const { error: updateError } = await supabase.from('purchase_import_rows').update({ review_status: status, review_note: status === 'Ignored' ? 'Ignored by shopkeeper; no stock posted' : null }).eq('id',rowId).eq('owner_id',user.id);
+  if (updateError) redirect(`/imports/${importId}?toast=import-row-error`);
   revalidatePath(`/imports/${importId}`); revalidatePath('/imports');
+  redirect(`/imports/${importId}?toast=import-row-ignored`);
 }
 
 export async function saveSettingsAction(_: ActionState, formData: FormData): Promise<ActionState> {
