@@ -5,7 +5,7 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { invoiceFingerprint } from '@/lib/invoice-fingerprint';
 
-export type ActionState = { error?: string; success?: string };
+export type ActionState = { error?: string; success?: string; bookingId?: string };
 
 async function requireUser() {
   const supabase = await createClient();
@@ -28,7 +28,7 @@ export async function loginAction(_: ActionState, formData: FormData): Promise<A
   if (!email || !password) return { error: 'Enter your email and password.' };
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: 'Login failed. Check the email/password and confirm that the shopkeeper account exists in Supabase Auth.' };
-  redirect('/dashboard');
+  redirect('/landing');
 }
 
 export async function logoutAction() {
@@ -81,7 +81,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
   revalidatePath('/dashboard'); revalidatePath('/bookings');
-  redirect(`/bookings/${data}?created=1`);
+  return { success: 'Booking has been noted.', bookingId: String(data) };
 }
 
 export async function updateBookingStatusAction(formData: FormData) {
