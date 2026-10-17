@@ -78,6 +78,7 @@ export default function BookingForm() {
         ref={formRef}
         action={action}
         className="card quick-booking-form"
+      >
         <input type="hidden" name="items_json" value={itemsJson} />
 
         <div className="quick-booking-body">
