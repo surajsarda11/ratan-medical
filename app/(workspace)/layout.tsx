@@ -4,7 +4,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   let user: { id: string; email?: string } | null = null;
-  let authFailure = false;
+  let authFailure = false;\n  let supabaseClient: Awaited<ReturnType<typeof createClient>> | undefined;
 
   try {
     const supabase = await createClient();
@@ -53,5 +53,31 @@ export default async function WorkspaceLayout({ children }: { children: React.Re
   }
 
   if (!user) redirect('/login');
-  return <AppShell email={user.email || 'Authorized shopkeeper'}>{children}</AppShell>;
+
+  let role: 'owner' | 'staff' = 'owner';
+  let label = user.email || 'Authorized shopkeeper';
+  if (supabaseClient) {
+    try {
+      const { data: membership, error: membershipError } = await supabaseClient
+        .from('staff_memberships')
+        .select('display_name, is_active')
+        .eq('member_user_id', user.id)
+        .maybeSingle();
+      if (!membershipError && membership) {
+        if (!membership.is_active) {
+          await supabaseClient.auth.signOut();
+          redirect('/login?access=disabled');
+        }
+        role = 'staff';
+        label = membership.display_name || user.email || 'Staff member';
+      }
+    } catch (error) {
+      if (error && typeof error === 'object' && 'digest' in error && String((error as { digest?: unknown }).digest).startsWith('NEXT_REDIRECT')) {
+        throw error;
+      }
+      // Ignore staff-table lookup failures until the optional staff migration is applied.
+    }
+  }
+
+  return <AppShell email={label} role={role}>{children}</AppShell>;
 }
