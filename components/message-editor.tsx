@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useState } from 'react';
 import { markWhatsAppSentAction, saveMessageDraftAction, type ActionState } from '@/lib/actions';
 import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
+import FeedbackToast from '@/components/feedback-toast';
 
 export default function MessageEditor({ settlementId, bookingId, phone, initialMessage }: { settlementId:string; bookingId:string; phone:string; initialMessage:string }) {
   const [state,action,pending] = useActionState(saveMessageDraftAction, {} as ActionState);
@@ -27,7 +28,7 @@ export default function MessageEditor({ settlementId, bookingId, phone, initialM
       <div style={{padding:'0 20px 18px',display:'flex',gap:9,flexWrap:'wrap',alignItems:'center'}}>
         <button className="btn btn-secondary" type="submit" disabled={pending}>{pending?'Saving draft…':'Save edited message'}</button>
       </div>
-      {state.error&&<div style={{padding:'0 20px 18px'}} className="error-text" role="alert">{state.error}</div>}
+      {state.error&&<FeedbackToast title="Message draft not saved" message={state.error} tone="error" trigger={state}/>}{state.error&&<div style={{padding:'0 20px 18px'}} className="error-text" role="alert">{state.error}</div>}
     </form>
     <div style={{padding:'0 20px 18px',display:'flex',gap:9,flexWrap:'wrap',alignItems:'center'}}>
       <WhatsAppDraftButton bookingId={bookingId} phone={phone} message={message} kind="settlement" label="Open current text in WhatsApp"/>
