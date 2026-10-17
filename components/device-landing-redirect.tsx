@@ -8,8 +8,9 @@ export default function DeviceLandingRedirect() {
 
   useEffect(() => {
     const width = window.innerWidth;
-    const isTabletSized = width >= 700 && width <= 1280;
-    router.replace(isTabletSized ? '/bookings/new' : '/dashboard');
+    const tabletWidth = width >= 700 && width <= 1280;
+    const touchDevice = window.matchMedia('(pointer: coarse)').matches || /iPad|Android/i.test(navigator.userAgent);
+    router.replace(tabletWidth && touchDevice ? '/bookings/new' : '/dashboard');
   }, [router]);
 
   return (
