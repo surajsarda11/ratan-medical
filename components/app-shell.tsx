@@ -9,6 +9,7 @@ const nav = [
   { href: '/bookings', icon: '▤', label: 'All Bookings' },
   { href: '/imports', icon: '⇧', label: 'Purchase CSV Import' },
   { href: '/ready', icon: '✓', label: 'Ready for Pickup' },
+  { href: '/follow-up', icon: '☎', label: 'Phone Follow-ups' },
   { href: '/settlements', icon: '₹', label: 'Settlements' },
   { href: '/reminders', icon: '◷', label: 'Reminder History' },
   { href: '/settings', icon: '⚙', label: 'Settings' },
