@@ -49,6 +49,12 @@ function feedbackFrom(pathname: string, params: URLSearchParams): Toast | null {
   if (params.get('toast') === 'import-created') {
     return { title: 'CSV draft created', message: 'No stock has changed. Review the product matches and approve each receipt allocation before stock is updated.', tone: 'success' };
   }
+  if (params.get('toast') === 'import-row-ignored') {
+    return { title: 'Invoice row ignored', message: 'The row was marked ignored. No stock was changed by this action.', tone: 'success' };
+  }
+  if (params.get('toast') === 'import-row-error') {
+    return { title: 'Invoice row not updated', message: 'The row status could not be saved. Refresh the import and try again.', tone: 'error' };
+  }
   if (params.get('created') === '1' && pathname.startsWith('/settlements/')) {
     return { title: 'Settlement saved', message: 'The pickup quantities and financial totals have been recorded. WhatsApp was not sent; review the draft and send it manually.', tone: 'success' };
   }
