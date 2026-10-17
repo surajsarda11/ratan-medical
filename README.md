@@ -164,3 +164,16 @@ The unit tests cover the pure financial calculation, matching rules and fingerpr
 ## Deployment cost caveat
 
 Vercel and Supabase offer free tiers, but quotas and commercial terms can change and may differ by account / region. Check current provider pricing and usage limits before relying on a free plan for a business workflow. This app intentionally avoids a paid WhatsApp provider in the first release.
+
+
+## Optional staff quick-booking mode
+
+To enable staff accounts without exposing the owner workspace:
+
+1. Run `supabase/migrations/202610180002_staff_quick_booking.sql` in the Supabase SQL Editor.
+2. In Vercel Project Settings → Environment Variables, add `SUPABASE_SERVICE_ROLE_KEY` for Production and Preview. Use the Supabase **service-role secret** only in this server-side variable; never use a `NEXT_PUBLIC_` prefix and never commit the key to Git.
+3. In Supabase Authentication → URL Configuration, allow `https://ratan-medical.vercel.app/auth/callback` as a redirect URL (and confirm the site URL is set to the deployed application domain). Email delivery/SMTP must be configured to deliver invitations.
+4. Sign in with the owner account, open **Staff Members**, and invite each staff member by email. Staff set their own password from the invitation email.
+5. Staff sign in with that email/password and land on **Quick Booking**. Their form requires customer mobile number, medicine name and quantity; all other details are optional. Staff can see only their own bookings and cannot access stock allocation, verified MRP, settlement/refund, invoice import, settings or staff management.
+
+The migration keeps existing owner-scoped records in place. Staff-created bookings are saved under the shop owner's data scope and are tagged with the staff user's ID. Disabling a staff membership blocks access on the next request. Test using sample data before using the feature with live customer records.
