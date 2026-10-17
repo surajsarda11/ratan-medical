@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/lib/actions';
 
-const nav = [
+const ownerNav = [
   { href: '/dashboard', icon: '▦', label: 'Dashboard' },
   { href: '/bookings/new', icon: '＋', label: 'New Booking' },
   { href: '/bookings', icon: '▤', label: 'All Bookings' },
@@ -11,11 +11,16 @@ const nav = [
   { href: '/ready', icon: '✓', label: 'Ready for Pickup' },
   { href: '/settlements', icon: '₹', label: 'Settlements' },
   { href: '/reminders', icon: '◷', label: 'Reminder History' },
+  { href: '/staff', icon: '♙', label: 'Staff Members' },
   { href: '/settings', icon: '⚙', label: 'Settings' },
 ];
+const staffNav = [
+  { href: '/staff-booking', icon: '＋', label: 'Quick Booking' },
+];
 
-export function AppShell({ children, email }: { children: React.ReactNode; email: string }) {
+export function AppShell({ children, email, role = 'owner' }: { children: React.ReactNode; email: string; role?: 'owner' | 'staff' }) {
   const currentPath = usePathname();
+  const nav = role === 'staff' ? staffNav : ownerNav;
   const title = nav.find((item) => currentPath === item.href || (item.href !== '/dashboard' && currentPath.startsWith(item.href)))?.label ?? 'Medicine Booking & Settlement Manager';
   return <div className="app-shell">
     <aside className="sidebar">
