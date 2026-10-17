@@ -1,4 +1,6 @@
 "use client";
+import { Suspense } from "react";
+import ActionToast from "@/components/action-toast";
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { logoutAction } from '@/lib/actions';
@@ -39,7 +41,7 @@ export function AppShell({ children, email }: { children: React.ReactNode; email
         <div><div className="topbar-kicker">RATAN MEDICAL HALL / WORKSPACE</div><div className="topbar-title">{title}</div></div>
         <div className="topbar-right"><span className="topbar-status"><span className="online-dot" /> Private workspace</span></div>
       </header>
-      <main className="main-content">{children}</main>
+      <main className="main-content"><Suspense fallback={null}><ActionToast /></Suspense>{children}</main>
     </div>
   </div>;
 }
