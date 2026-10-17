@@ -24,5 +24,5 @@ export function statusClass(status: string) {
   return 'status';
 }
 export function normalizeMedicine(value: unknown) {
-  return String(value ?? '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ');
+  return String(value ?? '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim().replace(/\s+/g, ' ').replace(/(\d)\s+([a-z])/g, '$1$2');
 }

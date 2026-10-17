@@ -146,6 +146,8 @@ Open the booking and verify every MRP to be sold. Choose **Record pickup / settl
 
 Use **Open WhatsApp draft** to open WhatsApp / WhatsApp Web with prefilled text. You must review and send it in WhatsApp yourself. The app records that a draft was opened separately from the **Mark sent (manual confirmation)** action. That latter record means the shopkeeper confirmed it manually; it is not a provider delivery receipt.
 
+
+Automated WhatsApp delivery is not enabled in this release. Quick Booking does not open a message automatically; existing manual draft controls remain available on booking and pickup pages.
 ## Sample data and tests
 
 - Sample invoice: `public/samples/purchase-invoice-sample.csv`

@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { invoiceFingerprint } from '@/lib/invoice-fingerprint';
+import { normalizeIndianMobile } from '@/lib/phone-number';
 
-export type ActionState = { error?: string; success?: string };
+export type ActionState = { error?: string; success?: string; bookingId?: string };
 
 async function requireUser() {
   const supabase = await createClient();
@@ -28,7 +29,7 @@ export async function loginAction(_: ActionState, formData: FormData): Promise<A
   if (!email || !password) return { error: 'Enter your email and password.' };
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) return { error: 'Login failed. Check the email/password and confirm that the shopkeeper account exists in Supabase Auth.' };
-  redirect('/dashboard');
+  redirect('/landing');
 }
 
 export async function logoutAction() {
@@ -41,9 +42,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   const { supabase } = await requireUser();
   const customerName = String(formData.get('customer_name') || '').trim();
   const phoneInput = String(formData.get('customer_phone') || '').trim();
-  const phoneDigits = phoneInput.replace(/\D/g, '');
-  const normalizedDigits = phoneDigits.startsWith('0091') ? phoneDigits.slice(2) : phoneDigits;
-  const phone = /^[6-9]\d{9}$/.test(normalizedDigits) ? `91${normalizedDigits}` : normalizedDigits;
+  const phone = normalizeIndianMobile(phoneInput);
   const expected = String(formData.get('expected_arrival_date') || '').trim() || null;
   const notes = String(formData.get('notes') || '').trim();
   const prescriptionVerified = formData.get('prescription_verified') === 'on';
@@ -51,10 +50,13 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   const advance = Number(advanceText || 0);
   const method = String(formData.get('advance_method') || 'Cash');
   let items: unknown;
-  try { items = JSON.parse(String(formData.get('items_json') || '[]')); } catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
-  if (!/^91[6-9]\d{9}$/.test(phone)) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
+  try { items = JSON.parse(String(formData.get('items_json') || '[]')); }
+  catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
+
+  if (!phone) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
   if (!Number.isFinite(advance) || advance < 0 || advance > 10000000) return { error: 'Advance must be a valid amount of ₹0 or more.' };
   if (!Array.isArray(items) || items.length < 1 || items.length > 20) return { error: 'Add between 1 and 20 medicine lines.' };
+
   const validItems = items.map((item: any) => ({
     product_name: String(item.product_name || '').trim().slice(0,180),
     product_code: String(item.product_code || '').trim().slice(0,100),
@@ -69,6 +71,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   if (validItems.some((item) => !item.product_name || !Number.isFinite(item.requested_quantity) || item.requested_quantity <= 0 || item.requested_quantity > 100000)) {
     return { error: 'Each medicine needs a product name and quantity greater than zero.' };
   }
+
   const { data, error } = await supabase.rpc('create_booking_with_items', {
     p_customer_name: customerName || null,
     p_customer_phone: phone,
@@ -80,10 +83,12 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     p_items: validItems,
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
-  revalidatePath('/dashboard'); revalidatePath('/bookings');
-  redirect(`/bookings/${data}?created=1`);
-}
 
+  revalidatePath('/dashboard');
+  revalidatePath('/bookings');
+  revalidatePath('/ready');
+  return { success: 'Booking saved successfully.', bookingId: String(data) };
+}
 export async function updateBookingStatusAction(formData: FormData) {
   const { supabase } = await requireUser();
   const id = String(formData.get('booking_id') || '');
@@ -96,6 +101,7 @@ export async function updateBookingStatusAction(formData: FormData) {
     redirect(`/bookings/${id}?status=${statusCode}`);
   }
   revalidatePath('/dashboard'); revalidatePath('/bookings'); revalidatePath(`/bookings/${id}`); revalidatePath('/ready');
+  redirect(`/bookings/${id}?status=updated&value=${encodeURIComponent(status)}`);
 }
 
 export async function addPaymentAction(formData: FormData) {
@@ -206,7 +212,7 @@ export async function createImportDraftAction(_: ActionState, formData: FormData
     return { error: 'The import draft was created but its rows could not be saved. It was marked cancelled. Check the CSV fields and database migration before retrying.' };
   }
   revalidatePath('/imports');
-  redirect(`/imports/${imported.id}`);
+  redirect(`/imports/${imported.id}?toast=import-created`);
 }
 
 export async function allocateInvoiceRowAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -236,8 +242,10 @@ export async function updateImportRowAction(formData: FormData) {
   const { data: row } = await supabase.from('purchase_import_rows').select('allocated_quantity').eq('id',rowId).eq('owner_id',user.id).maybeSingle();
   if (!row) redirect('/imports');
   if (status === 'Ignored' && Number(row.allocated_quantity||0)>0) redirect(`/imports/${importId}?review=partial`);
-  await supabase.from('purchase_import_rows').update({ review_status: status, review_note: status === 'Ignored' ? 'Ignored by shopkeeper; no stock posted' : null }).eq('id',rowId).eq('owner_id',user.id);
+  const { error: updateError } = await supabase.from('purchase_import_rows').update({ review_status: status, review_note: status === 'Ignored' ? 'Ignored by shopkeeper; no stock posted' : null }).eq('id',rowId).eq('owner_id',user.id);
+  if (updateError) redirect(`/imports/${importId}?toast=import-row-error`);
   revalidatePath(`/imports/${importId}`); revalidatePath('/imports');
+  redirect(`/imports/${importId}?toast=import-row-ignored`);
 }
 
 export async function saveSettingsAction(_: ActionState, formData: FormData): Promise<ActionState> {
@@ -258,17 +266,31 @@ export async function updateReminderAction(formData: FormData) {
   const id = String(formData.get('reminder_id') || '');
   const status = String(formData.get('status') || 'Done');
   const allowed = ['Pending','Snoozed','Done','Dismissed'];
-  if (!id || !allowed.includes(status)) redirect('/reminders');
+  if (!id || !allowed.includes(status)) redirect('/reminders?reminder=error');
   const dueAtText = String(formData.get('due_at') || '').trim();
   const updates: Record<string, unknown> = { status, updated_at: new Date().toISOString() };
-  if (status === 'Snoozed' && dueAtText) { const dueAt = new Date(`${dueAtText}:00+05:30`); if (!Number.isNaN(dueAt.getTime())) updates.due_at = dueAt.toISOString(); }
+  if (status === 'Snoozed') {
+    if (!dueAtText) redirect('/reminders?reminder=invalid');
+    const dueAt = new Date(`${dueAtText}:00+05:30`);
+    if (Number.isNaN(dueAt.getTime())) redirect('/reminders?reminder=invalid');
+    updates.due_at = dueAt.toISOString();
+  }
   if (status === 'Done') updates.last_contact_at = new Date().toISOString();
-  const { data: reminder } = await supabase.from('reminders').update(updates).eq('id', id).eq('owner_id', user.id).select('booking_id').maybeSingle();
-  if (reminder && status === 'Done') {
-    await supabase.from('bookings').update({ last_contact_at: new Date().toISOString() }).eq('id', reminder.booking_id).eq('owner_id', user.id);
+  const { data: reminder, error } = await supabase.from('reminders')
+    .update(updates)
+    .eq('id', id)
+    .eq('owner_id', user.id)
+    .select('booking_id')
+    .maybeSingle();
+  if (error || !reminder) redirect('/reminders?reminder=error');
+
+  if (status === 'Done') {
+    const completedAt = new Date().toISOString();
+    await supabase.from('bookings').update({ last_contact_at: completedAt }).eq('id', reminder.booking_id).eq('owner_id', user.id);
     await supabase.from('booking_events').insert({ owner_id: user.id, booking_id: reminder.booking_id, event_type: 'reminder_completed', summary: 'Reminder marked done', actor_user_id: user.id });
   }
   revalidatePath('/reminders'); revalidatePath('/dashboard'); revalidatePath('/bookings');
+  redirect(`/reminders?reminder=updated&value=${encodeURIComponent(status)}`);
 }
 
 export async function createFollowupReminderAction(formData: FormData) {
@@ -276,13 +298,16 @@ export async function createFollowupReminderAction(formData: FormData) {
   const bookingId = String(formData.get('booking_id') || '');
   const reason = String(formData.get('reason') || 'Customer follow-up').trim().slice(0,180);
   const dueDate = String(formData.get('due_at') || '').trim();
-  if (!bookingId || !dueDate) redirect('/reminders');
+  if (!bookingId || !dueDate) redirect('/reminders?reminder=invalid');
   const dueAt = new Date(`${dueDate}:00+05:30`);
   if (Number.isNaN(dueAt.getTime())) redirect(`/bookings/${bookingId}?reminder=invalid`);
+  const { data: booking } = await supabase.from('bookings').select('id').eq('id', bookingId).eq('owner_id', user.id).maybeSingle();
+  if (!booking) redirect('/reminders?reminder=error');
   const { error } = await supabase.from('reminders').insert({ owner_id: user.id, booking_id: bookingId, reason, due_at: dueAt.toISOString() });
-  if (!error) await supabase.from('booking_events').insert({ owner_id: user.id, booking_id: bookingId, event_type: 'reminder_created', summary: `Reminder created: ${reason}`, actor_user_id: user.id });
+  if (error) redirect(`/bookings/${bookingId}?reminder=error`);
+  await supabase.from('booking_events').insert({ owner_id: user.id, booking_id: bookingId, event_type: 'reminder_created', summary: `Reminder created: ${reason}`, actor_user_id: user.id });
   revalidatePath('/reminders'); revalidatePath(`/bookings/${bookingId}`);
-  redirect('/reminders');
+  redirect('/reminders?reminder=created');
 }
 
 export async function markWhatsAppOpenedAction(formData: FormData) {
@@ -311,11 +336,30 @@ export async function markWhatsAppSentAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const bookingId = String(formData.get('booking_id') || '');
   const kind = String(formData.get('kind') || 'customer_message').slice(0,40);
-  if (!bookingId) return;
+  const requestedPath = String(formData.get('return_path') || '');
+  if (!bookingId) redirect('/bookings');
+
+  let returnPath = `/bookings/${bookingId}`;
+  if (requestedPath === '/ready') returnPath = '/ready';
+  else if (requestedPath === `/bookings/${bookingId}`) returnPath = requestedPath;
+  else if (/^\/settlements\/[0-9a-f-]+$/i.test(requestedPath)) returnPath = requestedPath;
+
   const { data: booking } = await supabase.from('bookings').select('id').eq('id',bookingId).eq('owner_id',user.id).maybeSingle();
-  if (!booking) return;
+  if (!booking) redirect(`${returnPath}?whatsapp=error`);
+
   const now = new Date().toISOString();
-  await supabase.from('bookings').update({ last_contact_at: now }).eq('id',bookingId).eq('owner_id',user.id);
-  await supabase.from('booking_events').insert({ owner_id:user.id, booking_id:bookingId, event_type:'manual_message_marked_sent', summary:`Shopkeeper manually confirmed ${kind.replaceAll('_',' ')} was sent`, payload:{send_status:'manually_confirmed_by_shopkeeper',kind}, actor_user_id:user.id });
+  const { error: updateError } = await supabase.from('bookings').update({ last_contact_at: now }).eq('id',bookingId).eq('owner_id',user.id);
+  if (updateError) redirect(`${returnPath}?whatsapp=error`);
+
+  const { error: eventError } = await supabase.from('booking_events').insert({
+    owner_id:user.id,
+    booking_id:bookingId,
+    event_type:'manual_message_marked_sent',
+    summary:`Shopkeeper manually confirmed ${kind.replaceAll('_',' ')} was sent`,
+    payload:{send_status:'manually_confirmed_by_shopkeeper',kind},
+    actor_user_id:user.id
+  });
   revalidatePath(`/bookings/${bookingId}`); revalidatePath('/dashboard'); revalidatePath('/ready'); revalidatePath('/reminders');
+  if (eventError) redirect(`${returnPath}?whatsapp=log-error`);
+  redirect(`${returnPath}?whatsapp=marked-sent`);
 }

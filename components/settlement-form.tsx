@@ -4,6 +4,7 @@ import { useActionState } from 'react';
 import { createSettlementAction, type ActionState } from '@/lib/actions';
 import { inr } from '@/lib/format';
 import { calculateSettlement } from '@/lib/finance';
+import FeedbackToast from '@/components/feedback-toast';
 
 export default function SettlementForm({ bookingId, items, availableAdvance }: { bookingId:string; items:any[]; availableAdvance:number }) {
   const [state,action,pending] = useActionState(createSettlementAction, {} as ActionState);
@@ -12,6 +13,7 @@ export default function SettlementForm({ bookingId, items, availableAdvance }: {
   const [additionalPayment,setAdditionalPayment] = useState('0');
   const [discount,setDiscount] = useState('0');
   const [note,setNote] = useState('');
+  const [clientError,setClientError] = useState('');
   const lineItems = useMemo(()=>items.map((item)=>({item_id:item.id,quantity:Number(quantities[item.id]||0)})).filter((item)=>item.quantity>0),[items,quantities]);
   const grossCents = useMemo(()=>items.reduce((total,item)=>total+Math.round(Number(quantities[item.id]||0)*Number(item.verified_mrp||0)*100),0),[items,quantities]);
   const gross = grossCents/100;
@@ -20,7 +22,9 @@ export default function SettlementForm({ bookingId, items, availableAdvance }: {
   const expectedBalance = preview ? (preview.balanceDueCents-preview.refundDueCents)/100 : net - Math.max(0,Number(advanceApplied)||0) - Math.max(0,Number(additionalPayment)||0);
   const itemsJson = JSON.stringify(lineItems);
   const mprMissing = items.some((item)=>Number(quantities[item.id]||0)>0&&(!item.mrp_verified||!item.verified_mrp));
-  return <form action={action} className="card" onSubmit={(event)=>{if(mprMissing){event.preventDefault();window.alert('Please save a verified MRP for every item being collected before settlement.');return;} if(!window.confirm('Confirm the pickup quantities and payment allocations? The settlement will be saved to the ledger.')) event.preventDefault();}}>
+  return <form action={action} className="card" onSubmit={(event)=>{if(mprMissing){event.preventDefault();setClientError('Please save a verified MRP for every item being collected before settlement.');return;} setClientError(''); if(!window.confirm('Confirm the pickup quantities and payment allocations? The settlement will be saved to the ledger.')) event.preventDefault();}}>
+    {clientError&&<FeedbackToast title="MRP verification required" message={clientError} tone="error" trigger={clientError}/>}
+    {state.error&&<FeedbackToast title="Settlement not saved" message={state.error} tone="error" trigger={state}/>}
     <input type="hidden" name="booking_id" value={bookingId}/><input type="hidden" name="items_json" value={itemsJson}/><input type="hidden" name="customer_note" value={note}/>
     <div className="form-section"><div className="section-head"><div className="section-number">01</div><div><div className="section-head-title">Confirm medicine pickup</div><div className="section-head-sub">Only quantities physically received and not already collected can be settled.</div></div></div>
       <div className="table-wrap"><table><thead><tr><th>Medicine</th><th>Available</th><th>Verified MRP</th><th>Pickup qty</th><th>Line total</th></tr></thead><tbody>{items.map((item:any)=>{

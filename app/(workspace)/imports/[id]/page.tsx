@@ -4,8 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 import InvoiceRowReview from '@/components/invoice-row-review';
 import { dateLabel, statusClass } from '@/lib/format';
 import { compareInvoiceRow } from '@/lib/matching';
-export default async function ImportReviewPage({params,searchParams}:{params:Promise<{id:string}>;searchParams:Promise<{review?:string}>}) {
- const {id}=await params;const query=await searchParams;const supabase=await createClient();
+export default async function ImportReviewPage({params}:{params:Promise<{id:string}>}) {
+ const {id}=await params;const supabase=await createClient();
  const [{data:imp},{data:rows},{data:items},{data:bookings}]=await Promise.all([
   supabase.from('purchase_imports').select('*').eq('id',id).maybeSingle(),
   supabase.from('purchase_import_rows').select('*').eq('import_id',id).order('row_number'),
@@ -18,7 +18,6 @@ export default async function ImportReviewPage({params,searchParams}:{params:Pro
  const outstandingRows=(rows||[]).filter((row:any)=>!['Ignored','Allocated'].includes(row.review_status));
  return <><div className="page-heading"><div><div className="kicker">IMPORT RECONCILIATION</div><h1>{imp.invoice_number||imp.file_name}</h1><p>{imp.supplier_name||'Supplier not specified'} · Invoice {dateLabel(imp.invoice_date)} · Uploaded {dateLabel(imp.created_at)}. Preview and manually approve stock allocations below.</p></div><Link href="/imports" className="btn btn-secondary">← Import history</Link></div>
   <div className="stats-grid" style={{gridTemplateColumns:'repeat(3,minmax(0,1fr))'}}><div className="stat-card"><div className="stat-top">Invoice rows</div><div className="stat-value">{(rows||[]).length}</div><div className="stat-foot">Stored as a draft import</div></div><div className="stat-card"><div className="stat-top">Need review</div><div className="stat-value">{outstandingRows.length}</div><div className="stat-foot">No stock update until approval</div></div><div className="stat-card"><div className="stat-top">Import status</div><div style={{marginTop:17}}><span className={statusClass(imp.status)}>{imp.status}</span></div><div className="stat-foot">Repeated file uploads are detected</div></div></div>
-  {query.review==='partial'&&<div className="notice notice-amber" style={{marginBottom:17}}>This invoice row already has stock allocated. Complete or correct its reconciliation before ignoring the row.</div>}
   <div className="notice notice-amber" style={{marginBottom:17}}><b>Safety check:</b> product similarity is not product equivalence. Confirm medicine name, strength, formulation, brand and pack size. MRP is only verified when the physical package is checked. Allocation quantity cannot exceed either the remaining invoice quantity or the booking's outstanding request.</div>
   <div className="stack">{outstandingRows.map((row:any)=>{
     const scored=activeItems.map((item:any)=>({...item,match:compareInvoiceRow(row,item)})).sort((a:any,b:any)=>b.match.score-a.match.score);
