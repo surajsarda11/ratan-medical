@@ -99,7 +99,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     settings?.shop_name || 'Ratan Medical Hall',
     settings?.default_footer || `Regards,\n${settings?.shop_name || 'Ratan Medical Hall'}`,
   );
-  const whatsappDigits = phone.replace(/\\D/g, '');
+  const whatsappDigits = phone.replace(/\D/g, '');
   const whatsappUrl = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(message)}`;
   return {
     success: 'Booking has been noted.',
