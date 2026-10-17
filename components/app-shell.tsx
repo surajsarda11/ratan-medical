@@ -42,7 +42,7 @@ export function AppShell({ children, email, role = 'owner' }: { children: React.
     <div className="main-area">
       <header className="topbar">
         <div><div className="topbar-kicker">RATAN MEDICAL HALL / WORKSPACE</div><div className="topbar-title">{title}</div></div>
-        <div className="topbar-right"><span className="topbar-status"><span className="online-dot" /> Private workspace</span></div>
+        <div className="topbar-right"><span className="topbar-status"><span className="online-dot" /> {role === 'staff' ? 'Staff access · limited' : 'Private workspace'}</span></div>
       </header>
       <main className="main-content">{children}</main>
     </div>
