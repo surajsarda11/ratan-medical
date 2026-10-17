@@ -221,3 +221,8 @@ tbody tr:hover { background: #fbfdfb; }
   .quick-booking-body { padding: 14px; }
   .quick-section { padding: 14px; }
 }
+
+@media (min-width: 851px) and (max-width: 1150px) {
+  .quick-booking-main { grid-template-columns: minmax(0, 1.1fr) minmax(260px, .9fr); }
+  .quick-section { padding: 16px; }
+}
