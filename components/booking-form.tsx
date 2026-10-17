@@ -17,6 +17,8 @@ export default function BookingForm() {
   const phoneRef = useRef<HTMLInputElement>(null);
   const whatsappWindowRef = useRef<Window | null>(null);
   const [whatsappOpened, setWhatsappOpened] = useState(false);
+  const [noSmartphone, setNoSmartphone] = useState(false);
+  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const parsedAdvance = Number(advance || 0);
   const itemsJson = useMemo(
     () =>
@@ -48,11 +50,11 @@ export default function BookingForm() {
       whatsappWindowRef.current = null;
       return;
     }
-    if (!state.bookingId || !state.whatsappUrl) return;
+    if (!state.bookingId) return;
 
     let opened = false;
     const whatsappWindow = whatsappWindowRef.current;
-    if (whatsappWindow && !whatsappWindow.closed) {
+    if (state.whatsappUrl && whatsappWindow && !whatsappWindow.closed) {
       try {
         whatsappWindow.location.href = state.whatsappUrl;
         whatsappWindow.opener = null;
@@ -60,6 +62,8 @@ export default function BookingForm() {
       } catch {
         // The visible fallback link below still lets the shopkeeper open the draft.
       }
+    } else if (whatsappWindow && !whatsappWindow.closed) {
+      whatsappWindow.close();
     }
     whatsappWindowRef.current = null;
     setWhatsappOpened(opened);
@@ -72,16 +76,18 @@ export default function BookingForm() {
       void markWhatsAppOpenedAction(data).catch(() => {});
     }
 
-    // Keep the toast longer when the browser blocked the automatic tab so the fallback is usable.
+    const delay = opened ? 2600 : state.whatsappUrl ? 6500 : 2600;
     const timer = window.setTimeout(() => {
       setToastVisible(false);
       formRef.current?.reset();
       setLines([blankLine()]);
       setAdvance('0');
       setAdvanceMethod('Cash');
+      setNoSmartphone(false);
+      setWhatsappOptIn(false);
       setWhatsappOpened(false);
       window.requestAnimationFrame(() => phoneRef.current?.focus());
-    }, opened ? 2600 : 6500);
+    }, delay);
 
     return () => window.clearTimeout(timer);
   }, [state]);
@@ -98,10 +104,15 @@ export default function BookingForm() {
           <div className="booking-success-copy">
             <strong>Booking has been noted</strong>
             <span>
-              {whatsappOpened
-                ? 'WhatsApp draft opened in a new tab. Review it and tap Send; this app will reset for the next customer.'
-                : 'Booking saved. Open the customer confirmation message below, then continue with the next booking.'}
+              {state.noSmartphone
+                ? 'Booking saved. This customer is marked for a manual phone follow-up when the order is ready.'
+                : whatsappOpened
+                  ? 'WhatsApp booking-confirmation draft opened. Review it and tap Send; the form will reset shortly.'
+                  : state.whatsappUrl
+                    ? 'Booking saved. Open the customer confirmation message below, then continue with the next booking.'
+                    : 'Booking saved. WhatsApp messages are disabled until the customer agrees to receive updates.'}
             </span>
+            {state.warning && <span className="booking-success-warning">{state.warning}</span>}
             {state.whatsappUrl && !whatsappOpened && (
               <a
                 href={state.whatsappUrl}
@@ -127,8 +138,12 @@ export default function BookingForm() {
         action={action}
         className="card quick-booking-form"
         onSubmit={() => {
-          // Pre-open a tab during the user gesture so the browser does not block WhatsApp later.
-          // The tab is navigated only after the server confirms that the booking was saved.
+          // Only prepare a WhatsApp tab when the customer has opted in and has a smartphone.
+          // Navigate only after the booking is successfully saved.
+          if (!whatsappOptIn || noSmartphone) {
+            whatsappWindowRef.current = null;
+            return;
+          }
           try {
             whatsappWindowRef.current = window.open('about:blank', '_blank');
           } catch {
@@ -154,6 +169,38 @@ export default function BookingForm() {
               pattern="[+0-9 ()-]{10,20}"
               maxLength={20}
             />
+          </div>
+
+          <div className="quick-contact-preferences">
+            <label className="quick-preference-check">
+              <input
+                type="checkbox"
+                name="customer_no_smartphone"
+                checked={noSmartphone}
+                onChange={(event) => {
+                  const checked = event.target.checked;
+                  setNoSmartphone(checked);
+                  if (checked) setWhatsappOptIn(false);
+                }}
+              />
+              <span>
+                <strong>Customer does not have a smartphone</strong>
+                <small>Add this customer to the manual phone follow-up list when the order is ready.</small>
+              </span>
+            </label>
+            <label className="quick-preference-check">
+              <input
+                type="checkbox"
+                name="customer_whatsapp_opt_in"
+                checked={whatsappOptIn}
+                disabled={noSmartphone}
+                onChange={(event) => setWhatsappOptIn(event.target.checked)}
+              />
+              <span>
+                <strong>Customer agrees to WhatsApp order updates</strong>
+                <small>Required for scheduled pickup messages. Leave unchecked unless the customer has agreed.</small>
+              </span>
+            </label>
           </div>
 
           <div className="quick-booking-main">
