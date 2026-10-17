@@ -228,7 +228,7 @@ export async function inviteStaffAction(_: ActionState, formData: FormData): Pro
   try { admin = createAdminClient(); }
   catch { return { error: 'Staff invitations need SUPABASE_SERVICE_ROLE_KEY set as a server-only Vercel environment variable.' }; }
 
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://ratan-medical.vercel.app').replace(/\\/$/, '');
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://ratan-medical.vercel.app').replace(/\/$/, '');
   const redirectTo = `${siteUrl}/auth/callback?next=/set-password`;
   const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
     data: { display_name: displayName },
