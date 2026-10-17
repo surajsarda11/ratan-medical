@@ -76,7 +76,7 @@ export default function BookingForm() {
       void markWhatsAppOpenedAction(data).catch(() => {});
     }
 
-    const delay = opened ? 2600 : state.whatsappUrl ? 6500 : 2600;
+    const delay = state.warning ? 6500 : opened ? 2600 : state.whatsappUrl ? 6500 : 2600;
     const timer = window.setTimeout(() => {
       setToastVisible(false);
       formRef.current?.reset();
