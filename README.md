@@ -142,24 +142,12 @@ A duplicate invoice file with the same mapped contents, supplier, invoice number
 
 Open the booking and verify every MRP to be sold. Choose **Record pickup / settlement**, enter the collected quantity for each item, the authorized discount, how much existing advance to apply, and any additional payment received now. The database checks quantities and prices again before saving. If money is overpaid, the result is a **refund due**; record a refund payment from the booking ledger only after refunding the customer.
 
-### WhatsApp booking confirmations
+### WhatsApp
 
-The Quick Booking screen can open a prefilled booking-confirmation message after saving when the customer has agreed to receive WhatsApp updates. The shopkeeper must review the message and tap **Send** in WhatsApp. The app never treats opening a draft as proof that it was sent.
+Use **Open WhatsApp draft** to open WhatsApp / WhatsApp Web with prefilled text. You must review and send it in WhatsApp yourself. The app records that a draft was opened separately from the **Mark sent (manual confirmation)** action. That latter record means the shopkeeper confirmed it manually; it is not a provider delivery receipt.
 
-### Scheduled pickup WhatsApp notifications
 
-The pickup scheduler is configured to run at **10:00 AM IST (04:30 UTC)** each day in Production. It sends a pickup-ready template for bookings that became fully available on a previous Indian calendar day. Customers marked as having no smartphone, or whose WhatsApp consent checkbox is not selected, are excluded. Failed attempts are retried on later daily runs, up to three attempts.
-
-Before enabling this workflow:
-
-1. Apply `supabase/migrations/202610180002_pickup_whatsapp_scheduler.sql` in the Supabase SQL Editor.
-2. Configure Production environment variables in Vercel: `SUPABASE_SERVICE_ROLE_KEY` (server-only), `CRON_SECRET` (a long random secret), `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_GRAPH_API_VERSION`, `WHATSAPP_PICKUP_TEMPLATE_NAME`, and `WHATSAPP_TEMPLATE_LANGUAGE`.
-3. Set up the Meta WhatsApp Business Platform / Cloud API sender and get approval for a message template named `pickup_ready_notification` (or set the matching name in Vercel). The approved template must contain four body placeholders in this order: customer name, booking ID, shop name, and available medicine summary. For example: `Hi {{1}}, your medicines for booking {{2}} are ready for collection at {{3}}. Items ready: {{4}}. Please visit the pharmacy during opening hours.`
-4. Get the customer's permission before selecting **Customer agrees to WhatsApp order updates**. Selecting **Customer does not have a smartphone** disables WhatsApp consent and routes the customer to the manual **Phone Follow-ups** queue once their booking is ready.
-5. Redeploy Production after changing environment variables. Vercel Cron runs only for Production deployments, not Preview deployments.
-
-The cron endpoint authenticates with `Authorization: Bearer $CRON_SECRET`. It records when Meta accepts a message template request, but without a WhatsApp status webhook the app cannot confirm final delivery. On Vercel Hobby, cron timing may be anywhere within the scheduled hour; more precise timing requires a plan that supports per-minute scheduling.
-
+Automated WhatsApp delivery is not enabled in this release. Quick Booking does not open a message automatically; existing manual draft controls remain available on booking and pickup pages.
 ## Sample data and tests
 
 - Sample invoice: `public/samples/purchase-invoice-sample.csv`
@@ -177,4 +165,4 @@ The unit tests cover the pure financial calculation, matching rules and fingerpr
 
 ## Deployment cost caveat
 
-Vercel and Supabase offer free tiers, but quotas and commercial terms can change and may differ by account / region. Check current provider pricing and usage limits before relying on a free plan for a business workflow. Automated pickup notifications require Meta WhatsApp Business Platform credentials and an approved template; WhatsApp conversation/template charges may apply.
+Vercel and Supabase offer free tiers, but quotas and commercial terms can change and may differ by account / region. Check current provider pricing and usage limits before relying on a free plan for a business workflow. This app intentionally avoids a paid WhatsApp provider in the first release.
