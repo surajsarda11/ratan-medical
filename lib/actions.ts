@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { invoiceFingerprint } from '@/lib/invoice-fingerprint';
+import { createAdminClient } from '@/lib/supabase/admin';
 
-export type ActionState = { error?: string; success?: string };
+export type ActionState = { error?: string; success?: string; bookingCode?: string; whatsappUrl?: string };
 
 async function requireUser() {
   const supabase = await createClient();
@@ -26,8 +27,24 @@ export async function loginAction(_: ActionState, formData: FormData): Promise<A
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const password = String(formData.get('password') || '');
   if (!email || !password) return { error: 'Enter your email and password.' };
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { error: 'Login failed. Check the email/password and confirm that the shopkeeper account exists in Supabase Auth.' };
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({ email, password });
+  if (error || !signInData.user) return { error: 'Login failed. Check the email/password and confirm that the account exists in Supabase Auth.' };
+
+  // Staff accounts are routed into the limited booking workspace. If the staff
+  // migration has not been installed yet, retain the existing owner flow.
+  const { data: membership, error: membershipError } = await supabase
+    .from('staff_memberships')
+    .select('is_active')
+    .eq('member_user_id', signInData.user.id)
+    .maybeSingle();
+
+  if (!membershipError && membership) {
+    if (!membership.is_active) {
+      await supabase.auth.signOut();
+      return { error: 'Staff access is currently disabled. Please contact the shop owner.' };
+    }
+    redirect('/staff-booking');
+  }
   redirect('/dashboard');
 }
 
@@ -82,6 +99,157 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
   revalidatePath('/dashboard'); revalidatePath('/bookings');
   redirect(`/bookings/${data}?created=1`);
+}
+
+export async function createStaffBookingAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+  const { data: membership, error: membershipError } = await supabase
+    .from('staff_memberships')
+    .select('is_active')
+    .eq('member_user_id', user.id)
+    .maybeSingle();
+
+  if (membershipError) return { error: 'Staff booking is not configured yet. Apply the staff migration in Supabase and reload.' };
+  if (!membership?.is_active) return { error: 'An active staff account is required to create this booking.' };
+
+  const customerName = String(formData.get('customer_name') || '').trim().slice(0, 120);
+  const phoneInput = String(formData.get('customer_phone') || '').trim();
+  const phoneDigits = phoneInput.replace(/\\D/g, '');
+  const normalizedDigits = phoneDigits.startsWith('0091') ? phoneDigits.slice(2) : phoneDigits;
+  const phone = /^[6-9]\\d{9}$/.test(normalizedDigits) ? `91${normalizedDigits}` : normalizedDigits;
+  const notes = String(formData.get('notes') || '').trim().slice(0, 500);
+  const advanceText = String(formData.get('advance_amount') || '0').trim();
+  const advance = Number(advanceText || 0);
+  const allowedMethods = ['Cash', 'UPI', 'Card', 'Bank transfer', 'Other'];
+  const methodInput = String(formData.get('advance_method') || 'Cash');
+  const method = allowedMethods.includes(methodInput) ? methodInput : 'Cash';
+
+  let items: unknown;
+  try { items = JSON.parse(String(formData.get('items_json') || '[]')); }
+  catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
+
+  if (!/^91[6-9]\\d{9}$/.test(phone)) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
+  if (!Number.isFinite(advance) || advance < 0 || advance > 10000000) return { error: 'Advance must be a valid amount of ₹0 or more.' };
+  if (!Array.isArray(items) || items.length < 1 || items.length > 20) return { error: 'Add between 1 and 20 medicine lines.' };
+
+  const validItems = items.map((item: any) => ({
+    product_name: String(item.product_name || '').trim().slice(0, 180),
+    strength: String(item.strength || '').trim().slice(0, 80),
+    brand: String(item.brand || '').trim().slice(0, 120),
+    pack_size: String(item.pack_size || '').trim().slice(0, 80),
+    requested_quantity: Number(item.requested_quantity),
+    unit_label: String(item.unit_label || 'packs').trim().slice(0, 40) || 'packs',
+  }));
+  if (validItems.some((item) => !item.product_name || !Number.isFinite(item.requested_quantity) || item.requested_quantity <= 0 || item.requested_quantity > 100000)) {
+    return { error: 'Each medicine needs a product name and quantity greater than zero.' };
+  }
+
+  const { data, error } = await supabase.rpc('create_staff_booking', {
+    p_customer_name: customerName || null,
+    p_customer_phone: phone,
+    p_notes: notes || null,
+    p_advance: advance,
+    p_advance_method: method,
+    p_items: validItems,
+  });
+  if (error || !data?.booking_code) {
+    return { error: 'Could not save the booking. Confirm the staff migration is applied and that your staff access is active, then try again.' };
+  }
+
+  const bookingCode = String(data.booking_code);
+  const whatsappText = `Hello${customerName ? ` ${customerName}` : ''}, we have registered your medicine booking ${bookingCode} at Ratan Medical Hall. We will contact you when it is available.`;
+  const whatsappUrl = `https://wa.me/${phone}?text=${encodeURIComponent(whatsappText)}`;
+
+  revalidatePath('/staff-booking');
+  revalidatePath('/bookings');
+  revalidatePath('/dashboard');
+  return { success: `Booking ${bookingCode} saved successfully.`, bookingCode, whatsappUrl };
+}
+
+export async function inviteStaffAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+  const { data: ownMembership, error: ownMembershipError } = await supabase
+    .from('staff_memberships')
+    .select('id')
+    .eq('member_user_id', user.id)
+    .maybeSingle();
+  if (ownMembershipError) return { error: 'Apply the staff migration in Supabase before inviting staff.' };
+  if (ownMembership) return { error: 'Only the shop owner can invite or manage staff members.' };
+
+  const displayName = String(formData.get('display_name') || '').trim().slice(0, 100);
+  const email = String(formData.get('email') || '').trim().toLowerCase().slice(0, 254);
+  if (displayName.length < 1) return { error: 'Enter the staff member name.' };
+  if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) return { error: 'Enter a valid staff email address.' };
+
+  const { data: existing } = await supabase
+    .from('staff_memberships')
+    .select('id')
+    .eq('owner_id', user.id)
+    .ilike('email', email)
+    .maybeSingle();
+  if (existing) return { error: 'That email is already linked to this shop.' };
+
+  let admin;
+  try { admin = createAdminClient(); }
+  catch { return { error: 'Staff invitations need SUPABASE_SERVICE_ROLE_KEY set as a server-only Vercel environment variable.' }; }
+
+  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || 'https://ratan-medical.vercel.app').replace(/\\/$/, '');
+  const redirectTo = `${siteUrl}/auth/callback?next=/set-password`;
+  const { data: inviteData, error: inviteError } = await admin.auth.admin.inviteUserByEmail(email, {
+    data: { display_name: displayName },
+    redirectTo,
+  });
+  if (inviteError || !inviteData.user) {
+    return { error: 'The invitation could not be sent. Check Supabase email delivery, the allowed redirect URL, and whether this email already has an account.' };
+  }
+
+  const { error: linkError } = await admin.from('staff_memberships').insert({
+    owner_id: user.id,
+    member_user_id: inviteData.user.id,
+    display_name: displayName,
+    email,
+    is_active: true,
+    created_by: user.id,
+  });
+  if (linkError) {
+    return { error: 'The invitation email was created, but staff access could not be linked. Check whether this account is already linked to another shop before retrying.' };
+  }
+
+  revalidatePath('/staff');
+  return { success: `Invitation sent to ${email}. They can set their own password from the email link.` };
+}
+
+export async function toggleStaffAccessAction(formData: FormData): Promise<void> {
+  const { supabase, user } = await requireUser();
+  const { data: ownMembership, error: ownMembershipError } = await supabase
+    .from('staff_memberships')
+    .select('id')
+    .eq('member_user_id', user.id)
+    .maybeSingle();
+  if (ownMembershipError || ownMembership) redirect('/staff?error=owner_only');
+
+  const staffUserId = String(formData.get('staff_user_id') || '').trim();
+  const nextActive = String(formData.get('next_active') || '') === 'true';
+  if (!staffUserId || staffUserId === user.id) redirect('/staff');
+
+  const { data: member } = await supabase
+    .from('staff_memberships')
+    .select('id')
+    .eq('owner_id', user.id)
+    .eq('member_user_id', staffUserId)
+    .maybeSingle();
+  if (!member) redirect('/staff');
+
+  let admin;
+  try { admin = createAdminClient(); }
+  catch { redirect('/staff?error=configuration'); }
+
+  const { error } = await admin.from('staff_memberships')
+    .update({ is_active: nextActive, updated_at: new Date().toISOString() })
+    .eq('owner_id', user.id)
+    .eq('member_user_id', staffUserId);
+  if (error) redirect('/staff?error=update');
+  revalidatePath('/staff');
 }
 
 export async function updateBookingStatusAction(formData: FormData) {
