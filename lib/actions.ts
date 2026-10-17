@@ -4,8 +4,9 @@ import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { invoiceFingerprint } from '@/lib/invoice-fingerprint';
+import { bookingConfirmationMessage } from '@/lib/messages';
 
-export type ActionState = { error?: string; success?: string; bookingId?: string };
+export type ActionState = { error?: string; success?: string; bookingId?: string; whatsappUrl?: string };
 
 async function requireUser() {
   const supabase = await createClient();
@@ -81,7 +82,30 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
   revalidatePath('/dashboard'); revalidatePath('/bookings');
-  return { success: 'Booking has been noted.', bookingId: String(data) };
+
+  const [{ data: booking }, { data: settings }] = await Promise.all([
+    supabase.from('bookings').select('booking_code,customer_name,customer_phone,status').eq('id', String(data)).maybeSingle(),
+    supabase.from('shop_settings').select('shop_name,default_footer').maybeSingle(),
+  ]);
+  const message = bookingConfirmationMessage(
+    booking || {
+      booking_code: String(data).slice(0, 8).toUpperCase(),
+      customer_name: customerName || 'Customer',
+      customer_phone: phone,
+      status: 'Awaiting Stock',
+    },
+    validItems,
+    advance,
+    settings?.shop_name || 'Ratan Medical Hall',
+    settings?.default_footer || `Regards,\n${settings?.shop_name || 'Ratan Medical Hall'}`,
+  );
+  const whatsappDigits = phone.replace(/\\D/g, '');
+  const whatsappUrl = `https://wa.me/${whatsappDigits}?text=${encodeURIComponent(message)}`;
+  return {
+    success: 'Booking has been noted.',
+    bookingId: String(data),
+    whatsappUrl,
+  };
 }
 
 export async function updateBookingStatusAction(formData: FormData) {
