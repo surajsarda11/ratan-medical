@@ -18,6 +18,8 @@ create index if not exists staff_memberships_owner_created_idx
   on public.staff_memberships(owner_id, created_at desc);
 create index if not exists staff_memberships_owner_active_idx
   on public.staff_memberships(owner_id, is_active);
+create unique index if not exists staff_memberships_owner_email_uniq
+  on public.staff_memberships(owner_id, lower(email));
 
 alter table public.bookings
   add column if not exists created_by uuid references auth.users(id) on delete set null default auth.uid();
@@ -81,6 +83,7 @@ as $$
 declare
   v_actor uuid := auth.uid();
   v_owner uuid;
+  v_staff_name text;
   v_booking_id uuid;
   v_code text;
   v_item jsonb;
@@ -91,7 +94,7 @@ begin
     raise exception 'Authentication required';
   end if;
 
-  select m.owner_id into v_owner
+  select m.owner_id, m.display_name into v_owner, v_staff_name
   from public.staff_memberships m
   where m.member_user_id = v_actor and m.is_active
   limit 1;
@@ -163,8 +166,8 @@ begin
     owner_id, booking_id, event_type, summary, payload, actor_user_id
   ) values (
     v_owner, v_booking_id, 'booking_created',
-    'Staff booking created with ' || v_item_count || ' medicine item(s)',
-    jsonb_build_object('advance_received', round(v_advance, 2), 'created_by_staff', true),
+    'Staff ' || coalesce(v_staff_name, 'member') || ' created a booking with ' || v_item_count || ' medicine item(s)',
+    jsonb_build_object('advance_received', round(v_advance, 2), 'created_by_staff', true, 'created_by_name', v_staff_name),
     v_actor
   );
 
