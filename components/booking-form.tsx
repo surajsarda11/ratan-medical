@@ -39,7 +39,12 @@ export default function BookingForm() {
   }, []);
 
   useEffect(() => {
-    if (state.error || !state.bookingId) {
+    if (state.error) {
+      setToastVisible(true);
+      const timer = window.setTimeout(() => setToastVisible(false), 6500);
+      return () => window.clearTimeout(timer);
+    }
+    if (!state.bookingId) {
       setToastVisible(false);
       return;
     }
@@ -63,13 +68,13 @@ export default function BookingForm() {
 
   return (
     <>
-      {toastVisible && state.bookingId && (
-        <div className="booking-success-popup" role="status" aria-live="polite">
+      {toastVisible && (state.bookingId || state.error) && (
+        <div className={`booking-success-popup ${state.error ? "booking-error" : ""}`} role={state.error ? "alert" : "status"} aria-live={state.error ? "assertive" : "polite"}>
           <div className="booking-success-icon">✓</div>
           <div className="booking-success-copy">
-            <strong>Booking has been noted</strong>
-            <span>Booking saved successfully. The form will reset shortly for the next customer.</span>
-            <a href={'/bookings/' + state.bookingId}>View booking details →</a>
+            <strong>{state.error ? "Booking not saved" : "Booking has been noted"}</strong>
+            <span>{state.error || "Booking saved successfully. The form will reset shortly for the next customer."}</span>
+            {state.bookingId && <a href={'/bookings/' + state.bookingId}>View booking details →</a>}
           </div>
         </div>
       )}
