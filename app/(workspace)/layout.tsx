@@ -4,7 +4,8 @@ import { createClient } from '@/lib/supabase/server';
 
 export default async function WorkspaceLayout({ children }: { children: React.ReactNode }) {
   let user: { id: string; email?: string } | null = null;
-  let authFailure = false;\n  let supabaseClient: Awaited<ReturnType<typeof createClient>> | undefined;
+  let authFailure = false;
+  let supabaseClient: Awaited<ReturnType<typeof createClient>> | undefined;
 
   try {
     const supabase = await createClient();
