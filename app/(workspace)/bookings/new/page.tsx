@@ -1,4 +1,16 @@
 import BookingForm from '@/components/booking-form';
+
 export default function NewBookingPage() {
-  return <><div className="page-heading"><div><div className="kicker">NEW CUSTOMER ORDER</div><h1>Register a booking</h1><p>Capture the customer contact, exact medicine identity, quantity and any advance received. A WhatsApp confirmation draft will be available after saving.</p></div></div><div style={{maxWidth:1000,margin:'0 auto'}}><BookingForm /></div></>;
+  return (
+    <div className="quick-booking-page">
+      <div className="page-heading">
+        <div>
+          <div className="kicker">COUNTER WORKFLOW</div>
+          <h1>Quick booking</h1>
+          <p>Record the customer number, medicine request and any advance paid. After saving, the form resets for the next customer.</p>
+        </div>
+      </div>
+      <BookingForm />
+    </div>
+  );
 }
