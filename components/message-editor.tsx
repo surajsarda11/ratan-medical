@@ -15,7 +15,7 @@ export default function MessageEditor({ settlementId, bookingId, phone, initialM
     setSaveToast(state.success);
     const timer = window.setTimeout(() => setSaveToast(''), 6000);
     return () => window.clearTimeout(timer);
-  }, [state.success]);
+  }, [state]);
 
   return <div className="card">
     <div className="card-header"><div><div className="card-title">Editable WhatsApp message</div><div className="card-description">Edit the draft if needed, save it, then open WhatsApp to review and send manually.</div></div></div>
