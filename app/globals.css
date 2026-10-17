@@ -275,3 +275,6 @@ tbody tr:hover { background: #fbfdfb; }
 .action-toast-error { border-color: #edc5c1; }
 .action-toast-error .action-toast-icon { background: #a6382f; color: #fff; }
 @media (max-width: 640px) { .action-toast { top: 10px; right: 10px; width: calc(100vw - 20px); } }
+
+.booking-success-popup.booking-error { border-color: #edc5c1; }
+.booking-success-popup.booking-error .booking-success-icon { background: #a6382f; }
