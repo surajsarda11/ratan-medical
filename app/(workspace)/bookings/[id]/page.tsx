@@ -44,7 +44,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{i
       <div className="stack">
         <section className="card card-pad"><div className="split-header"><div className="card-title">Booking summary</div><span className={statusClass(booking.status)}>{booking.status}</span></div><div className="divider"/><div className="money-row"><span className="muted">Advance received</span><b>{inr(advanceReceived)}</b></div><div className="money-row"><span className="muted">Advance applied</span><b>{inr(advanceApplied)}</b></div><div className="money-row"><span className="muted">Additional payments</span><b>{inr(additional)}</b></div><div className="money-row"><span className="muted">Refund payments</span><b>{inr(refunds)}</b></div><div className="money-row"><span className="muted">Last contact (manual confirmation)</span><b>{dateTimeLabel(booking.last_contact_at)}</b></div><div className="money-row"><span className="muted">Last draft opened</span><b>{dateTimeLabel(booking.last_whatsapp_draft_opened_at)}</b></div><div className="money-row"><span className="muted">Unused advance (before refunds)</span><b>{inr(Math.max(0,advanceReceived-advanceApplied-refunds))}</b></div>{booking.notes&&<div className="notice notice-neutral" style={{marginTop:12}}>{booking.notes}</div>}</section>
         <section className="card card-pad">
-          <div className="card-title">Customer WhatsApp consent</div>
+          <div className="card-title">Customer WhatsApp permission</div>
           <div className="card-description">Record the customer's explicit choice. Existing bookings remain unconfirmed until you record it here.</div>
           <div className="money-row">
             <span className="muted">Current choice</span>
@@ -71,11 +71,11 @@ export default async function BookingDetailPage({ params }: { params: Promise<{i
             <button className="btn btn-secondary" type="submit">Save consent choice</button>
           </form>
           <div className="divider"/>
-          <div className="card-title">WhatsApp confirmation</div>
+          <div className="card-title">WhatsApp Messenger message</div>
           <div className="card-description">Opening a draft does not mean it was sent. The shopkeeper must review and send manually.</div>
           {booking.whatsapp_consent === true ? <>
             <div className="inline-form" style={{marginTop:15,flexWrap:'wrap'}}>
-              <WhatsAppDraftButton bookingId={id} phone={booking.customer_phone} message={openWhatsapp} kind="booking_confirmation" label="Open WhatsApp draft"/>
+              <WhatsAppDraftButton bookingId={id} phone={booking.customer_phone} message={openWhatsapp} kind="booking_confirmation" label="Open draft in WhatsApp Messenger"/>
               <form action={markWhatsAppSentAction}>
                 <input type="hidden" name="booking_id" value={id}/>
                 <input type="hidden" name="kind" value="booking_confirmation"/>
@@ -83,7 +83,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{i
                 <button className="btn btn-secondary" type="submit">Mark sent (manual confirmation)</button>
               </form>
             </div>
-            <div className="notice notice-neutral" style={{marginTop:12}}>{contactWasOpened?'A WhatsApp draft was opened. Sending is not confirmed until the shopkeeper marks it as sent.':'Status: Draft not yet opened. The shopkeeper reviews and sends it manually.'}</div>
+            <div className="notice notice-neutral" style={{marginTop:12}}>{contactWasOpened?'A WhatsApp Messenger draft was opened. Sending is not confirmed until the shopkeeper marks it as sent.':'Status: Draft not yet opened. The shopkeeper reviews and sends it manually in WhatsApp Messenger.'}</div>
           </> : <div className="notice notice-amber" style={{marginTop:12}}>
             {booking.whatsapp_consent === false ? 'The customer did not agree to WhatsApp messages.' : 'WhatsApp consent has not been recorded for this booking.'}
             {' '}Draft and mark-sent actions are unavailable until consent is recorded as Agreed.

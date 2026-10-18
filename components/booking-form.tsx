@@ -107,7 +107,7 @@ export default function BookingForm() {
           </div>
 
           <div className="field quick-consent-field">
-            <label htmlFor="whatsapp_consent">Customer consent for WhatsApp messages *</label>
+            <label htmlFor="whatsapp_consent">Customer permission to message via WhatsApp *</label>
             <select
               className="select"
               id="whatsapp_consent"
@@ -120,7 +120,7 @@ export default function BookingForm() {
               <option value="yes">Customer agreed</option>
               <option value="no">Customer did not agree</option>
             </select>
-            <small>Record the customer's explicit choice. WhatsApp message controls are available only when consent is agreed.</small>
+            <small>Record the customer's permission. Draft and manual send-confirmation actions stay blocked unless the customer agreed.</small>
           </div>
 
           <div className="quick-booking-main">

@@ -25,7 +25,7 @@ export default function WhatsAppDraftButton({ bookingId, phone, message, kind = 
         return;
       }
       try { opened.opener = null; } catch {}
-      setNotice({ tone: 'success', message: 'WhatsApp draft opened. Review the text and tap Send yourself; this app cannot verify delivery.' });
+      setNotice({ tone: 'success', message: 'WhatsApp Messenger draft opened. Review the text and tap Send yourself; this app cannot verify delivery.' });
       const data = new FormData();
       data.set('booking_id', bookingId);
       data.set('kind', kind);
@@ -37,7 +37,7 @@ export default function WhatsAppDraftButton({ bookingId, phone, message, kind = 
     }} disabled={!allowed} title={!allowed ? 'Customer WhatsApp consent is not recorded as agreed' : undefined}>↗ {label}</button>
     {notice && <div className={'action-toast action-toast-' + notice.tone} role={notice.tone === 'error' ? 'alert' : 'status'} aria-live={notice.tone === 'error' ? 'assertive' : 'polite'}>
       <div className="action-toast-icon" aria-hidden="true">{notice.tone === 'success' ? '✓' : notice.tone === 'warning' ? '!' : '×'}</div>
-      <div className="action-toast-copy"><strong>{notice.tone === 'success' ? 'WhatsApp draft ready' : notice.tone === 'warning' ? 'Draft activity not recorded' : 'Could not open WhatsApp'}</strong><span>{notice.message}</span></div>
+      <div className="action-toast-copy"><strong>{notice.tone === 'success' ? 'WhatsApp Messenger draft ready' : notice.tone === 'warning' ? 'Draft activity not recorded' : 'Could not open WhatsApp Messenger'}</strong><span>{notice.message}</span></div>
       <button type="button" className="action-toast-close" onClick={() => setNotice(null)} aria-label="Dismiss notification">×</button>
     </div>}
   </>;
