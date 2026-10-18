@@ -155,10 +155,9 @@ export async function createSettlementAction(_: ActionState, formData: FormData)
   try { items = JSON.parse(String(formData.get('items_json') || '[]')); } catch { return { error: 'Could not read the pickup quantities. Refresh the page and try again.' }; }
   const advanceApplied = Number(formData.get('advance_applied') || 0);
   const additionalPayment = Number(formData.get('additional_payment') || 0);
-  const discount = Number(formData.get('discount') || 0);
   const customerNote = String(formData.get('customer_note') || '').slice(0,500);
   if (!bookingId || !Array.isArray(items)) return { error: 'Booking details are missing.' };
-  if (![advanceApplied, additionalPayment, discount].every((n) => Number.isFinite(n) && n >= 0)) return { error: 'Discount and payment amounts must be valid non-negative numbers.' };
+  if (![advanceApplied, additionalPayment].every((n) => Number.isFinite(n) && n >= 0)) return { error: 'Advance and additional payment amounts must be valid non-negative numbers.' };
   const safeItems = items.filter((x: any) => Number(x.quantity) > 0).map((x: any) => ({ item_id: String(x.item_id), quantity: Number(x.quantity) }));
   if (!safeItems.length) return { error: 'Enter a pickup quantity for at least one medicine.' };
   const { data, error } = await supabase.rpc('finalize_settlement', {
@@ -166,7 +165,7 @@ export async function createSettlementAction(_: ActionState, formData: FormData)
     p_items: safeItems,
     p_advance_applied: advanceApplied,
     p_additional_payment: additionalPayment,
-    p_discount: discount,
+    p_discount: 0,
     p_customer_note: customerNote || null,
   });
   if (error || !data?.id) return { error: safeError(error, 'Could not save the settlement. Confirm all picked medicines have verified MRP and enough received stock.') };
