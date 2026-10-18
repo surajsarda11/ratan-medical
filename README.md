@@ -12,8 +12,8 @@ A mobile-responsive internal web app for a physical pharmacy. Built with Next.js
 - Exact / possible / no-safe-match suggestions, manual row review, duplicate-file detection and explicit receipt allocation.
 - Atomic receipt allocation that prevents the same invoice quantity from being allocated twice, locks records to avoid concurrent over-allocation, and caps allocation at the booking's remaining request.
 - Verified-MRP gate before settlement. Purchase rate is never used as MRP.
-- Server-side settlement calculation, advance-applied ledger, balance payable / refund due and an editable WhatsApp text draft. Refund payments are explicitly allocated between settlement refunds and unused advances to avoid double-counting.
-- WhatsApp click-to-chat for booking, pickup and settlement messages. Opening a draft is logged separately from the shopkeeper manually confirming that it was sent.
+- Server-side settlement calculation without a discount field, advance-applied ledger, balance payable / refund due and an editable itemized text bill. Refund payments are explicitly allocated between settlement refunds and unused advances to avoid double-counting.
+- Manual WhatsApp Messenger / WhatsApp Web click-to-chat for booking, pickup and delivery-completed bill drafts. Copy, download and print are also available for settlement text. Opening a draft is logged separately from the shopkeeper manually confirming that it was sent.
 - Follow-up reminders, reminder history, editable shop footer and settings.
 - Tests for settlement arithmetic, conservative matching and invoice fingerprints.
 
@@ -21,7 +21,7 @@ A mobile-responsive internal web app for a physical pharmacy. Built with Next.js
 
 This repository is a source project, **not an already deployed website**. It is not connected to a Supabase project and has no secrets or customer data. You need to create the Supabase project and Vercel deployment as described below.
 
-- Fully automatic WhatsApp messaging is not implemented. Official WhatsApp Business Platform integration needs a Meta business setup, approved templates / consent as required, a phone number ID, access token, webhook configuration and may incur provider charges. Ordinary click-to-chat only opens a prefilled draft.
+- WhatsApp uses ordinary click-to-chat only: the app opens a prefilled draft in WhatsApp Messenger / WhatsApp Web and the shopkeeper sends it manually. No WhatsApp API credentials, automatic sending or delivery webhooks are used.
 - Reminders are stored in the app but are not delivered as push notifications or automatically messaged. There is no background scheduler in this release.
 - This first release is one-account / one-data-owner oriented. Extra staff sharing one shop's data would need an explicit membership/roles table and corresponding RLS policies; do not simply give every staff member a separate login and expect the data to be shared.
 - CSV import preview is limited to 2.5 MB and 5,000 rows per file; it only allocates incoming invoice units to existing bookings. It is not a complete inventory / batch-expiry stock ledger for products that have not been booked.
@@ -144,14 +144,11 @@ A duplicate invoice file with the same mapped contents, supplier, invoice number
 
 ### Pickup and settlement
 
-Open the booking and verify every MRP to be sold. Choose **Record pickup / settlement**, enter the collected quantity for each item, the authorized discount, how much existing advance to apply, and any additional payment received now. The database checks quantities and prices again before saving. If money is overpaid, the result is a **refund due**; record a refund payment from the booking ledger only after refunding the customer.
+Open the booking and verify every MRP to be sold. Choose **Record pickup / settlement**, enter the collected quantity for each item, how much existing advance to apply, and any additional payment received now. The sale total is calculated from the recorded quantities and verified MRP; there is no discount field. The database checks quantities and prices again before saving. If money is overpaid, the result is a **refund due**; record a refund payment from the booking ledger only after refunding the customer.
 
-### WhatsApp
+### WhatsApp Messenger
 
-Use **Open WhatsApp draft** to open WhatsApp / WhatsApp Web with prefilled text. You must review and send it in WhatsApp yourself. The app records that a draft was opened separately from the **Mark sent (manual confirmation)** action. That latter record means the shopkeeper confirmed it manually; it is not a provider delivery receipt.
-
-
-Automated WhatsApp delivery is not enabled in this release. Quick Booking requires staff to record whether the customer agreed to WhatsApp messages. WhatsApp draft and manual-send-confirmation controls are available only when consent is recorded as **Agreed**. A **Not agreed** or **Not recorded** choice blocks those controls. Opening a draft never means it was sent; manual confirmation is only the shopkeeper's confirmation, not a provider delivery receipt. Quick Booking does not open a message automatically.
+The app uses ordinary WhatsApp Messenger / WhatsApp Web click-to-chat links. The shopkeeper reviews and sends the prefilled message manually; the app does not send automatically or connect to a WhatsApp API. Booking, order-ready and settlement-bill drafts are available only when the customer is recorded as having agreed to receive WhatsApp messages. A **Not agreed** or **Not recorded** choice blocks outbound draft and manual-send-confirmation actions. Opening a draft is recorded separately from **Mark sent**, which is only the shopkeeper's confirmation and not proof of delivery. Settlement pages also offer **Copy text bill**, **Download .txt** and **Print bill**.
 ## Sample data and tests
 
 - Sample invoice: `public/samples/purchase-invoice-sample.csv`
@@ -165,7 +162,7 @@ npm run check
 npm run build
 ```
 
-The unit tests cover the pure financial calculation, matching rules and fingerprint behavior. Before real use, also test database authorization with two different Supabase users, booking creation with zero / variable advance, duplicate CSV import, partial receipt allocation, strength / pack mismatches, manual MRP verification, partial pickup, settlement refunds, and WhatsApp provider failure/fallback. The SQL functions enforce the critical stock and settlement constraints, but the first live deployment still requires owner configuration and a controlled pilot.
+The unit tests cover the pure financial calculation, matching rules and fingerprint behavior. Before real use, also test database authorization with two different Supabase users, booking creation with zero / variable advance, duplicate CSV import, partial receipt allocation, strength / pack mismatches, manual MRP verification, partial pickup, settlement refunds, and manual WhatsApp draft opening and consent gating. The SQL functions enforce the critical stock and settlement constraints, but the first live deployment still requires owner configuration and a controlled pilot.
 
 ## Deployment cost caveat
 
