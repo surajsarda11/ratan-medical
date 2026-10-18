@@ -5,7 +5,7 @@ import { markWhatsAppOpenedAction } from '@/lib/actions';
 
 type Notice = { tone: 'success' | 'warning' | 'error'; message: string };
 
-export default function WhatsAppDraftButton({ bookingId, phone, message, kind = 'booking_confirmation', label = 'Open WhatsApp draft' }: { bookingId:string; phone:string; message:string; kind?:string; label?:string }) {
+export default function WhatsAppDraftButton({ bookingId, phone, message, kind = 'booking_confirmation', label = 'Open WhatsApp draft', allowed = true }: { bookingId:string; phone:string; message:string; kind?:string; label?:string; allowed?:boolean }) {
   const digits = phone.replace(/\D/g,'');
   const href = `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
   const [notice, setNotice] = useState<Notice | null>(null);
@@ -34,7 +34,7 @@ export default function WhatsAppDraftButton({ bookingId, phone, message, kind = 
       } catch {
         setNotice({ tone: 'warning', message: 'WhatsApp opened, but the app could not record that the draft was opened. Sending and delivery remain unverified.' });
       }
-    }}>↗ {label}</button>
+    }} disabled={!allowed} title={!allowed ? 'Customer WhatsApp consent is not recorded as agreed' : undefined}>↗ {label}</button>
     {notice && <div className={'action-toast action-toast-' + notice.tone} role={notice.tone === 'error' ? 'alert' : 'status'} aria-live={notice.tone === 'error' ? 'assertive' : 'polite'}>
       <div className="action-toast-icon" aria-hidden="true">{notice.tone === 'success' ? '✓' : notice.tone === 'warning' ? '!' : '×'}</div>
       <div className="action-toast-copy"><strong>{notice.tone === 'success' ? 'WhatsApp draft ready' : notice.tone === 'warning' ? 'Draft activity not recorded' : 'Could not open WhatsApp'}</strong><span>{notice.message}</span></div>

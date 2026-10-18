@@ -35,6 +35,9 @@ export type Booking = {
   expected_arrival_date: string | null;
   next_reminder_at: string | null;
   last_contact_at: string | null;
+  whatsapp_consent: boolean | null;
+  whatsapp_consent_updated_at: string | null;
+  whatsapp_consent_updated_by: string | null;
   notes: string | null;
   created_at: string;
 };

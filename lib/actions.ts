@@ -46,6 +46,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   const expected = String(formData.get('expected_arrival_date') || '').trim() || null;
   const notes = String(formData.get('notes') || '').trim();
   const prescriptionVerified = formData.get('prescription_verified') === 'on';
+  const whatsappConsent = String(formData.get('whatsapp_consent') || '').trim();
   const advanceText = String(formData.get('advance_amount') || '0').trim();
   const advance = Number(advanceText || 0);
   const method = String(formData.get('advance_method') || 'Cash');
@@ -54,6 +55,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
 
   if (!phone) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
+  if (!['yes', 'no'].includes(whatsappConsent)) return { error: 'Record whether the customer agreed to WhatsApp messages.' };
   if (!Number.isFinite(advance) || advance < 0 || advance > 10000000) return { error: 'Advance must be a valid amount of ₹0 or more.' };
   if (!Array.isArray(items) || items.length < 1 || items.length > 20) return { error: 'Add between 1 and 20 medicine lines.' };
 
@@ -72,7 +74,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     return { error: 'Each medicine needs a product name and quantity greater than zero.' };
   }
 
-  const { data, error } = await supabase.rpc('create_booking_with_items', {
+  const { data, error } = await supabase.rpc('create_booking_with_consent', {
     p_customer_name: customerName || null,
     p_customer_phone: phone,
     p_expected_arrival_date: expected,
@@ -81,6 +83,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     p_advance: advance,
     p_advance_method: method,
     p_items: validItems,
+    p_whatsapp_consent: whatsappConsent === 'yes',
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
 
@@ -89,6 +92,23 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   revalidatePath('/ready');
   return { success: 'Booking saved successfully.', bookingId: String(data) };
 }
+export async function updateWhatsAppConsentAction(formData: FormData) {
+  const { supabase } = await requireUser();
+  const bookingId = String(formData.get('booking_id') || '');
+  const choice = String(formData.get('whatsapp_consent') || '');
+  if (!bookingId || !['yes', 'no'].includes(choice)) redirect('/bookings?consent=error');
+
+  const { error } = await supabase.rpc('set_booking_whatsapp_consent', {
+    p_booking_id: bookingId,
+    p_agreed: choice === 'yes',
+  });
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath('/bookings');
+  revalidatePath('/ready');
+  if (error) redirect(`/bookings/${bookingId}?consent=error`);
+  redirect(`/bookings/${bookingId}?consent=saved`);
+}
+
 export async function updateBookingStatusAction(formData: FormData) {
   const { supabase } = await requireUser();
   const id = String(formData.get('booking_id') || '');
@@ -315,7 +335,10 @@ export async function markWhatsAppOpenedAction(formData: FormData) {
   const bookingId = String(formData.get('booking_id') || '');
   const kind = String(formData.get('kind') || 'follow_up').slice(0,40);
   if (!bookingId) return;
-  await supabase.from('bookings').update({ last_whatsapp_draft_opened_at: new Date().toISOString() }).eq('id', bookingId).eq('owner_id', user.id);
+  const { data: booking } = await supabase.from('bookings').select('id,whatsapp_consent').eq('id', bookingId).eq('owner_id', user.id).maybeSingle();
+  if (!booking || booking.whatsapp_consent !== true) return;
+  const { error: updateError } = await supabase.from('bookings').update({ last_whatsapp_draft_opened_at: new Date().toISOString() }).eq('id', bookingId).eq('owner_id', user.id);
+  if (updateError) return;
   await supabase.from('booking_events').insert({ owner_id: user.id, booking_id: bookingId, event_type: 'whatsapp_draft_opened', summary: `WhatsApp ${kind} draft opened; send status not confirmed`, payload: { send_status: 'opened_not_confirmed' }, actor_user_id: user.id });
   revalidatePath(`/bookings/${bookingId}`); revalidatePath('/dashboard'); revalidatePath('/reminders');
 }
@@ -344,8 +367,9 @@ export async function markWhatsAppSentAction(formData: FormData) {
   else if (requestedPath === `/bookings/${bookingId}`) returnPath = requestedPath;
   else if (/^\/settlements\/[0-9a-f-]+$/i.test(requestedPath)) returnPath = requestedPath;
 
-  const { data: booking } = await supabase.from('bookings').select('id').eq('id',bookingId).eq('owner_id',user.id).maybeSingle();
+  const { data: booking } = await supabase.from('bookings').select('id,whatsapp_consent').eq('id',bookingId).eq('owner_id',user.id).maybeSingle();
   if (!booking) redirect(`${returnPath}?whatsapp=error`);
+  if (booking.whatsapp_consent !== true) redirect(`${returnPath}?whatsapp=consent-required`);
 
   const now = new Date().toISOString();
   const { error: updateError } = await supabase.from('bookings').update({ last_contact_at: now }).eq('id',bookingId).eq('owner_id',user.id);

@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { addPaymentAction, createFollowupReminderAction, markWhatsAppSentAction, updateBookingStatusAction, verifyItemMrpAction } from '@/lib/actions';
+import { addPaymentAction, createFollowupReminderAction, markWhatsAppSentAction, updateBookingStatusAction, updateWhatsAppConsentAction, verifyItemMrpAction } from '@/lib/actions';
 import { dateLabel, dateTimeLabel, inr, statusClass } from '@/lib/format';
 import { bookingConfirmationMessage } from '@/lib/messages';
 import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
@@ -43,7 +43,52 @@ export default async function BookingDetailPage({ params }: { params: Promise<{i
       </div>
       <div className="stack">
         <section className="card card-pad"><div className="split-header"><div className="card-title">Booking summary</div><span className={statusClass(booking.status)}>{booking.status}</span></div><div className="divider"/><div className="money-row"><span className="muted">Advance received</span><b>{inr(advanceReceived)}</b></div><div className="money-row"><span className="muted">Advance applied</span><b>{inr(advanceApplied)}</b></div><div className="money-row"><span className="muted">Additional payments</span><b>{inr(additional)}</b></div><div className="money-row"><span className="muted">Refund payments</span><b>{inr(refunds)}</b></div><div className="money-row"><span className="muted">Expected arrival</span><b>{dateLabel(booking.expected_arrival_date)}</b></div><div className="money-row"><span className="muted">Last contact (manual confirmation)</span><b>{dateTimeLabel(booking.last_contact_at)}</b></div><div className="money-row"><span className="muted">Last draft opened</span><b>{dateTimeLabel(booking.last_whatsapp_draft_opened_at)}</b></div><div className="money-row"><span className="muted">Unused advance (before refunds)</span><b>{inr(Math.max(0,advanceReceived-advanceApplied-refunds))}</b></div>{booking.notes&&<div className="notice notice-neutral" style={{marginTop:12}}>{booking.notes}</div>}</section>
-        <section className="card card-pad"><div className="card-title">WhatsApp confirmation</div><div className="card-description">Review the prefilled message in WhatsApp. Opening the draft does not mean it was sent.</div><div className="inline-form" style={{marginTop:15,flexWrap:'wrap'}}><WhatsAppDraftButton bookingId={id} phone={booking.customer_phone} message={openWhatsapp} kind="booking_confirmation" label="Open WhatsApp draft"/><form action={markWhatsAppSentAction}><input type="hidden" name="booking_id" value={id}/><input type="hidden" name="kind" value="booking_confirmation"/><input type="hidden" name="return_path" value={`/bookings/${id}`}/><button className="btn btn-secondary" type="submit">Mark sent (manual confirmation)</button></form></div><div className="notice notice-neutral" style={{marginTop:12}}>{contactWasOpened?'A WhatsApp draft was opened. Sending is not confirmed until the shopkeeper marks it as sent.':'Status: Draft not yet opened. The shopkeeper reviews and sends it manually.'}</div></section>
+        <section className="card card-pad">
+          <div className="card-title">Customer WhatsApp consent</div>
+          <div className="card-description">Record the customer's explicit choice. Existing bookings remain unconfirmed until you record it here.</div>
+          <div className="money-row">
+            <span className="muted">Current choice</span>
+            <span className={booking.whatsapp_consent === true ? 'status status-green' : booking.whatsapp_consent === false ? 'status status-red' : 'status status-amber'}>
+              {booking.whatsapp_consent === true ? 'Agreed' : booking.whatsapp_consent === false ? 'Not agreed' : 'Not recorded'}
+            </span>
+          </div>
+          <form action={updateWhatsAppConsentAction} className="stack" style={{gap:10,marginTop:10}}>
+            <input type="hidden" name="booking_id" value={id}/>
+            <div className="field">
+              <label htmlFor="booking_whatsapp_consent">Customer's choice</label>
+              <select
+                className="select"
+                id="booking_whatsapp_consent"
+                name="whatsapp_consent"
+                defaultValue={booking.whatsapp_consent === true ? 'yes' : booking.whatsapp_consent === false ? 'no' : ''}
+                required
+              >
+                <option value="">Select the customer's choice</option>
+                <option value="yes">Customer agreed</option>
+                <option value="no">Customer did not agree</option>
+              </select>
+            </div>
+            <button className="btn btn-secondary" type="submit">Save consent choice</button>
+          </form>
+          <div className="divider"/>
+          <div className="card-title">WhatsApp confirmation</div>
+          <div className="card-description">Opening a draft does not mean it was sent. The shopkeeper must review and send manually.</div>
+          {booking.whatsapp_consent === true ? <>
+            <div className="inline-form" style={{marginTop:15,flexWrap:'wrap'}}>
+              <WhatsAppDraftButton bookingId={id} phone={booking.customer_phone} message={openWhatsapp} kind="booking_confirmation" label="Open WhatsApp draft"/>
+              <form action={markWhatsAppSentAction}>
+                <input type="hidden" name="booking_id" value={id}/>
+                <input type="hidden" name="kind" value="booking_confirmation"/>
+                <input type="hidden" name="return_path" value={`/bookings/${id}`}/>
+                <button className="btn btn-secondary" type="submit">Mark sent (manual confirmation)</button>
+              </form>
+            </div>
+            <div className="notice notice-neutral" style={{marginTop:12}}>{contactWasOpened?'A WhatsApp draft was opened. Sending is not confirmed until the shopkeeper marks it as sent.':'Status: Draft not yet opened. The shopkeeper reviews and sends it manually.'}</div>
+          </> : <div className="notice notice-amber" style={{marginTop:12}}>
+            {booking.whatsapp_consent === false ? 'The customer did not agree to WhatsApp messages.' : 'WhatsApp consent has not been recorded for this booking.'}
+            {' '}Draft and mark-sent actions are unavailable until consent is recorded as Agreed.
+          </div>}
+        </section>
         <section className="card"><div className="card-header"><div><div className="card-title">Record a payment</div><div className="card-description">Payments and refunds stay in the ledger.</div></div></div><form action={addPaymentAction} className="form-section stack" style={{gap:12}}><input type="hidden" name="booking_id" value={id}/><div className="form-grid"><div className="field"><label>Type</label><select className="select" name="payment_type"><option value="advance">Advance received</option><option value="additional">Additional payment</option><option value="refund">Refund paid</option></select></div><div className="field"><label>Amount (₹)</label><input className="input" type="number" min="0.01" max="10000000" step="0.01" name="amount" placeholder="0.00" required/></div><div className="field"><label>Method</label><select className="select" name="method"><option>Cash</option><option>UPI</option><option>Card</option><option>Bank transfer</option><option>Other</option></select></div><div className="field"><label>Note</label><input className="input" name="note" placeholder="Optional note" maxLength={500}/></div></div><button className="btn btn-primary" type="submit">Save payment record</button></form></section>
         <section className="card"><div className="card-header"><div><div className="card-title">Follow-up reminders</div><div className="card-description">Create a manual follow-up task.</div></div></div><form action={createFollowupReminderAction} className="form-section stack" style={{gap:11}}><input type="hidden" name="booking_id" value={id}/><div className="field"><label>Reminder reason</label><select className="select" name="reason"><option>Customer follow-up</option><option>Check expected stock arrival</option><option>Pickup reminder</option><option>Settlement follow-up</option><option>Review invoice match</option></select></div><div className="field"><label>Due date and time</label><input className="input" type="datetime-local" name="due_at" required/></div><button className="btn btn-secondary" type="submit">＋ Add reminder</button></form>{(reminders||[]).length>0&&<div style={{padding:'0 18px 16px'}} className="small muted">{reminders?.length} reminder(s) recorded for this booking.</div>}</section>
       </div>

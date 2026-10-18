@@ -57,7 +57,11 @@ This repository is a source project, **not an already deployed website**. It is 
 
    `supabase/migrations/202610180001_initial_schema.sql`
 
-   This creates the tables, indexes, RLS policies, limited API grants and server-side functions used for atomic booking creation, receipt allocation and settlement. Review the SQL before applying it to any production database.
+   Then run the follow-up migration:
+
+   `supabase/migrations/202610180003_whatsapp_consent.sql`
+
+   This adds an explicit WhatsApp consent field, consent-update history and consent-aware booking creation. Existing bookings remain **Not recorded** until staff asks the customer and saves a choice. Review the SQL before applying it to any production database.
 
 4. In **Supabase → Authentication → Users**, create an authorized shopkeeper user. In Authentication settings, disable public sign-up if this is to remain an internal-only workspace. Use the dashboard/admin path to add staff only after a shared-shop access model is implemented.
 
@@ -147,7 +151,7 @@ Open the booking and verify every MRP to be sold. Choose **Record pickup / settl
 Use **Open WhatsApp draft** to open WhatsApp / WhatsApp Web with prefilled text. You must review and send it in WhatsApp yourself. The app records that a draft was opened separately from the **Mark sent (manual confirmation)** action. That latter record means the shopkeeper confirmed it manually; it is not a provider delivery receipt.
 
 
-Automated WhatsApp delivery is not enabled in this release. Quick Booking does not open a message automatically; existing manual draft controls remain available on booking and pickup pages.
+Automated WhatsApp delivery is not enabled in this release. Quick Booking requires staff to record whether the customer agreed to WhatsApp messages. WhatsApp draft and manual-send-confirmation controls are available only when consent is recorded as **Agreed**. A **Not agreed** or **Not recorded** choice blocks those controls. Opening a draft never means it was sent; manual confirmation is only the shopkeeper's confirmation, not a provider delivery receipt. Quick Booking does not open a message automatically.
 ## Sample data and tests
 
 - Sample invoice: `public/samples/purchase-invoice-sample.csv`
