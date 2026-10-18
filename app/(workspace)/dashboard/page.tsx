@@ -6,7 +6,7 @@ export default async function DashboardPage() {
   const supabase = await createClient();
   const [{ data: summaryData, error: summaryError }, { data: recentBookings }] = await Promise.all([
     supabase.rpc('get_dashboard_summary'),
-    supabase.from('bookings').select('id,booking_code,customer_name,customer_phone,status,expected_arrival_date,created_at,booking_items(id,product_name,strength,pack_size,requested_quantity,received_quantity,unit_label)').order('created_at',{ascending:false}).limit(8),
+    supabase.from('bookings').select('id,booking_code,customer_name,customer_phone,status,created_at,booking_items(id,product_name,strength,pack_size,requested_quantity,received_quantity,unit_label)').order('created_at',{ascending:false}).limit(8),
   ]);
   const summary: any = summaryData || {};
   const allBookings = recentBookings || [];
