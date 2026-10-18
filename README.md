@@ -61,7 +61,11 @@ The production app is deployed at https://ratan-medical.vercel.app/. This reposi
 
    `supabase/migrations/202610180003_whatsapp_consent.sql`
 
-   This adds an explicit WhatsApp consent field, consent-update history and consent-aware booking creation. Existing bookings remain **Not recorded** until staff asks the customer and saves a choice. Review the SQL before applying it to any production database.
+   Then apply the event-audit permission fix:
+
+   `supabase/migrations/202610180005_booking_events_insert_permission.sql`
+
+   This last migration allows signed-in shopkeepers to append booking activity events while retaining the existing owner-only Row Level Security policy. It is required for actions such as marking a manually sent message and recording reminder activity. Existing bookings remain **Not recorded** until staff asks the customer and saves a choice. Review the SQL before applying it to any production database.
 
 4. In **Supabase → Authentication → Users**, create an authorized shopkeeper user. In Authentication settings, disable public sign-up if this is to remain an internal-only workspace. Use the dashboard/admin path to add staff only after a shared-shop access model is implemented.
 
