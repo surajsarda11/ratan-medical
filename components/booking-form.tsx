@@ -12,6 +12,7 @@ export default function BookingForm() {
   const [lines, setLines] = useState<QuickLine[]>([blankLine()]);
   const [advance, setAdvance] = useState('0');
   const [advanceMethod, setAdvanceMethod] = useState('Cash');
+  const [whatsappConsent, setWhatsappConsent] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
@@ -56,6 +57,7 @@ export default function BookingForm() {
       setLines([blankLine()]);
       setAdvance('0');
       setAdvanceMethod('Cash');
+      setWhatsappConsent('');
       window.requestAnimationFrame(() => phoneRef.current?.focus());
     }, 2400);
 
@@ -102,6 +104,23 @@ export default function BookingForm() {
               pattern="[+0-9 ()-]{10,20}"
               maxLength={20}
             />
+          </div>
+
+          <div className="field quick-consent-field">
+            <label htmlFor="whatsapp_consent">Customer consent for WhatsApp messages *</label>
+            <select
+              className="select"
+              id="whatsapp_consent"
+              name="whatsapp_consent"
+              value={whatsappConsent}
+              onChange={(event) => setWhatsappConsent(event.target.value)}
+              required
+            >
+              <option value="">Select the customer's choice</option>
+              <option value="yes">Customer agreed</option>
+              <option value="no">Customer did not agree</option>
+            </select>
+            <small>Record the customer's explicit choice. WhatsApp message controls are available only when consent is agreed.</small>
           </div>
 
           <div className="quick-booking-main">
