@@ -7,15 +7,15 @@ export function bookingConfirmationMessage(booking: any, items: any[], advance: 
 
 export function prepareSettlementMessage(message: string, bookingStatus: string) {
   return String(message || '')
-    .split(/\\r?\\n/)
-    .filter((line) => !/^\\s*(?:Gross total|Discount)\\s*:/i.test(line))
+    .split(/\r?\n/)
+    .filter((line) => !/^\s*(?:Gross total|Discount)\s*:/i.test(line))
     .map((line) => {
-      if (/^\\s*Net sale value\\s*:/i.test(line)) return line.replace(/^\\s*Net sale value\\s*:/i, 'Sale total:');
+      if (/^\s*Net sale value\s*:/i.test(line)) return line.replace(/^\s*Net sale value\s*:/i, 'Sale total:');
       if (/^Medicine Order Update$/i.test(line.trim())) return bookingStatus === 'Completed' ? 'Delivery completed — itemized bill' : 'Pickup / partial collection — itemized bill';
-      if (bookingStatus === 'Completed' && /^\\s*Status:\\s*Collected\\b/i.test(line)) return 'Status: Delivery completed';
+      if (bookingStatus === 'Completed' && /^\s*Status:\s*Collected\b/i.test(line)) return 'Status: Delivery completed';
       return line;
     })
-    .join('\\n')
-    .replace(/\\n{3,}/g, '\\n\\n')
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
