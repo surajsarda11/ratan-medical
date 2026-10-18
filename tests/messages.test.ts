@@ -26,10 +26,11 @@ describe('customer settlement message', () => {
   });
 
   it('marks partial settlement messages accurately', () => {
-    const message = prepareSettlementMessage(legacyBill, 'Partially Collected');
+    const partialBill = legacyBill.replace('Status: Collected', 'Status: Partially collected');
+    const message = prepareSettlementMessage(partialBill, 'Partially Collected');
     expect(message).toContain('Pickup / partial collection — itemized bill');
     expect(message).toContain('Sale total: ₹625.00');
     expect(message).not.toMatch(/Gross total:|Discount:/i);
-    expect(message).toContain('Status: Collected');
+    expect(message).toContain('Status: Partially collected');
   });
 });
