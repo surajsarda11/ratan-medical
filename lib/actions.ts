@@ -43,7 +43,6 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   const customerName = String(formData.get('customer_name') || '').trim();
   const phoneInput = String(formData.get('customer_phone') || '').trim();
   const phone = normalizeIndianMobile(phoneInput);
-  const expected = String(formData.get('expected_arrival_date') || '').trim() || null;
   const notes = String(formData.get('notes') || '').trim();
   const prescriptionVerified = formData.get('prescription_verified') === 'on';
   const whatsappConsent = String(formData.get('whatsapp_consent') || '').trim();
@@ -77,7 +76,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   const { data, error } = await supabase.rpc('create_booking_with_consent', {
     p_customer_name: customerName || null,
     p_customer_phone: phone,
-    p_expected_arrival_date: expected,
+    p_expected_arrival_date: null,
     p_notes: notes || null,
     p_prescription_verified: prescriptionVerified,
     p_advance: advance,
