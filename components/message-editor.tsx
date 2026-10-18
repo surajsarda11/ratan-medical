@@ -18,7 +18,7 @@ export default function MessageEditor({ settlementId, bookingId, phone, initialM
   }, [state]);
 
   return <div className="card">
-    <div className="card-header"><div><div className="card-title">Editable WhatsApp message</div><div className="card-description">Edit the draft if needed, save it, then open WhatsApp to review and send manually.</div></div></div>
+    <div className="card-header"><div><div className="card-title">Delivery completion and itemized bill message</div><div className="card-description">Review or edit this saved bill message. Copy, download or print it, or open WhatsApp Messenger to send manually.</div></div></div>
     <form action={action}>
       <input type="hidden" name="settlement_id" value={settlementId}/>
       <div className="form-section">
@@ -31,7 +31,7 @@ export default function MessageEditor({ settlementId, bookingId, phone, initialM
       {state.error&&<FeedbackToast title="Message draft not saved" message={state.error} tone="error" trigger={state}/>}{state.error&&<div style={{padding:'0 20px 18px'}} className="error-text" role="alert">{state.error}</div>}
     </form>
     {whatsappAllowed ? <div style={{padding:'0 20px 18px',display:'flex',gap:9,flexWrap:'wrap',alignItems:'center'}}>
-      <WhatsAppDraftButton bookingId={bookingId} phone={phone} message={message} kind="settlement" label="Open current text in WhatsApp" allowed={whatsappAllowed}/>
+      <WhatsAppDraftButton bookingId={bookingId} phone={phone} message={message} kind="settlement" label="Open draft in WhatsApp Messenger" allowed={whatsappAllowed}/>
       <form action={markWhatsAppSentAction}>
         <input type="hidden" name="booking_id" value={bookingId}/>
         <input type="hidden" name="kind" value="settlement"/>
