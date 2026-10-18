@@ -20,10 +20,10 @@ function feedbackFrom(pathname: string, params: URLSearchParams): Toast | null {
   }
   if (status === 'updated') {
     if (value === 'Completed') {
-      return { title: 'Order marked Completed', message: 'No automatic WhatsApp notification was sent because WhatsApp automation is not configured. Open the WhatsApp draft to notify the customer manually.', tone: 'warning' };
+      return { title: 'Order marked Completed', message: 'No customer message was sent automatically. Open the WhatsApp Messenger draft and send it manually if the customer has agreed.', tone: 'warning' };
     }
     if (value === 'Ready for Pickup') {
-      return { title: 'Order ready for pickup', message: 'WhatsApp automation is not configured, so no automatic pickup message was sent. You can notify the customer using the WhatsApp draft.', tone: 'warning' };
+      return { title: 'Order ready for pickup', message: 'No customer message was sent automatically. You can notify the customer manually through WhatsApp Messenger if they have agreed.', tone: 'warning' };
     }
     return { title: 'Order status updated', message: value ? 'The order status is now ' + value + '. No customer message was sent automatically.' : 'The order status was saved.', tone: 'success' };
   }
@@ -61,7 +61,7 @@ function feedbackFrom(pathname: string, params: URLSearchParams): Toast | null {
     return { title: 'Invoice row not updated', message: 'The row status could not be saved. Refresh the import and try again.', tone: 'error' };
   }
   if (params.get('created') === '1' && pathname.startsWith('/settlements/')) {
-    return { title: 'Settlement saved', message: 'The pickup quantities and financial totals have been recorded. WhatsApp was not sent; review the draft and send it manually.', tone: 'success' };
+    return { title: 'Settlement saved', message: 'The pickup quantities and financial totals have been recorded. No message was sent automatically; review the WhatsApp Messenger draft and send it manually.', tone: 'success' };
   }
   if (params.get('created') === '1' && pathname.startsWith('/bookings/')) {
     return { title: 'Booking saved', message: 'The booking and advance, if any, have been recorded. Only prepare a WhatsApp message if the saved consent choice is Agreed.', tone: 'success' };
