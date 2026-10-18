@@ -19,7 +19,7 @@ A mobile-responsive internal web app for a physical pharmacy. Built with Next.js
 
 ## Not live / requires setup
 
-This repository is a source project, **not an already deployed website**. It is not connected to a Supabase project and has no secrets or customer data. You need to create the Supabase project and Vercel deployment as described below.
+The production app is deployed at https://ratan-medical.vercel.app/. This repository does not contain production secrets or customer records. A separate local or hosted copy needs its own Supabase project and Vercel configuration as described below.
 
 - WhatsApp uses ordinary click-to-chat only: the app opens a prefilled draft in WhatsApp Messenger / WhatsApp Web and the shopkeeper sends it manually. No WhatsApp API credentials, automatic sending or delivery webhooks are used.
 - Reminders are stored in the app but are not delivered as push notifications or automatically messaged. There is no background scheduler in this release.
