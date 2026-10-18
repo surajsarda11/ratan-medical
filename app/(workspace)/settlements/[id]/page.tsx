@@ -8,10 +8,7 @@ export default async function SettlementDetailPage({params}:{params:Promise<{id:
   const {id}=await params; const supabase=await createClient();
   const {data:settlement}=await supabase.from('settlements').select('*').eq('id',id).maybeSingle();
   if(!settlement)notFound();
-  const [{data:booking},{data:settings}]=await Promise.all([
-    supabase.from('bookings').select('id,booking_code,customer_name,customer_phone,status,whatsapp_consent').eq('id',settlement.booking_id).maybeSingle(),
-    supabase.from('shop_settings').select('shop_phone').maybeSingle(),
-  ]);
+  const {data:booking}=await supabase.from('bookings').select('id,booking_code,customer_name,customer_phone,status,whatsapp_consent').eq('id',settlement.booking_id).maybeSingle();
   if(!booking)notFound();
   const lines=Array.isArray(settlement.items_json)?settlement.items_json:[];
   const customerMessage=prepareSettlementMessage(settlement.message_text, booking.status);
