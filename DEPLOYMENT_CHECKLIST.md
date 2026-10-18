@@ -27,7 +27,7 @@
 
 ## Known first-release boundaries
 
-- Official WhatsApp Business Platform automation is not configured.
+- Customer messages use manual WhatsApp Messenger / WhatsApp Web drafts only; no WhatsApp API credentials or automated sending are used.
 - Push notifications / scheduled reminder sending are not configured.
 - Shared multi-staff shop membership and roles are not configured.
 - No formal tax invoice or PDF bill is issued.
