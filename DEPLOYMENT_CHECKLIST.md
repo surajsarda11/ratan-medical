@@ -17,8 +17,8 @@
 - [ ] Verify a refund is marked paid only after the customer actually receives it.
 - [ ] Test Quick Booking with both "Customer agreed" and "Customer did not agree" selections.
 - [ ] Confirm old bookings show "Not recorded" and can be updated from booking details.
-- [ ] Confirm WhatsApp draft / mark-sent actions are blocked unless consent is "Agreed".
-- [ ] Open an allowed WhatsApp draft; confirm the app never claims it was sent until manually marked sent.
+- [ ] Confirm WhatsApp Messenger draft / mark-sent actions are blocked unless consent is "Agreed".
+- [ ] Open an allowed WhatsApp Messenger draft; confirm the app never claims it was sent until manually marked sent. Test copy, download and print bill actions.
 - [ ] Check access with a second unrelated Supabase user; the second user must not see this shop's rows.
 - [ ] Configure Vercel environment variables for the correct environments and deploy.
 - [ ] Confirm the hosted app login, booking create, import, allocation and settlement flow work on both mobile and desktop.
