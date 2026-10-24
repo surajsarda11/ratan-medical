@@ -1,11 +1,115 @@
 'use client';
 
 import { useActionState, useEffect, useMemo, useRef, useState } from 'react';
-import { createBookingAction, type ActionState } from '@/lib/actions';
+import { createBookingAction, type ActionState, type BookingSnapshot } from '@/lib/actions';
 import { inr } from '@/lib/format';
+import { bookingConfirmationMessage } from '@/lib/messages';
+import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
 
 type QuickLine = { product_name: string; requested_quantity: string };
 const blankLine = (): QuickLine => ({ product_name: '', requested_quantity: '1' });
+
+function BookingReadOnly({ booking, bookingId, onNewBooking }: {
+  booking?: BookingSnapshot;
+  bookingId: string;
+  onNewBooking: () => void;
+}) {
+  const message = booking
+    ? bookingConfirmationMessage(
+        { booking_code: booking.bookingCode, customer_name: booking.customerName },
+        booking.items,
+        booking.advance,
+        booking.shopName,
+        booking.footer,
+      )
+    : '';
+
+  return (
+    <section className="card quick-confirmation-card">
+      <div className="card-header">
+        <div>
+          <div className="card-title">Booking confirmed</div>
+          <div className="card-description">
+            {booking?.bookingCode ? 'Reference: ' + booking.bookingCode : 'Saved booking reference: ' + bookingId}
+          </div>
+        </div>
+        <span className="status status-green">Saved · read-only</span>
+      </div>
+
+      {booking ? (
+        <div className="card-pad">
+          <div className="notice notice-neutral" style={{ marginBottom: 18 }}>
+            This booking is saved. The details on this screen cannot be edited. Choose <strong>New booking</strong> when you are ready to record the next customer.
+          </div>
+
+          <div className="grid-2" style={{ alignItems: 'start' }}>
+            <section className="card card-pad" style={{ boxShadow: 'none' }}>
+              <div className="card-title">Customer & booking</div>
+              <div className="divider" />
+              {booking.customerName && <div className="money-row"><span className="muted">Customer</span><b>{booking.customerName}</b></div>}
+              <div className="money-row"><span className="muted">Mobile number</span><b>{booking.customerPhone}</b></div>
+              <div className="money-row"><span className="muted">Booking status</span><span className="status status-amber">{booking.status}</span></div>
+              <div className="money-row"><span className="muted">Created</span><b>{new Date(booking.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}</b></div>
+              <div className="money-row"><span className="muted">WhatsApp permission</span><span className={booking.whatsappConsent ? 'status status-green' : 'status status-red'}>{booking.whatsappConsent ? 'Agreed' : 'Not agreed'}</span></div>
+            </section>
+
+            <section className="card card-pad" style={{ boxShadow: 'none' }}>
+              <div className="card-title">Advance payment</div>
+              <div className="divider" />
+              <div className="money-row"><span className="muted">Advance recorded</span><b>{inr(booking.advance)}</b></div>
+              {booking.advance > 0 && <div className="money-row"><span className="muted">Payment method</span><b>{booking.advanceMethod || 'Recorded'}</b></div>}
+              <div className="notice notice-neutral" style={{ marginTop: 12 }}>This is an advance against the booking, not a completed medicine sale.</div>
+            </section>
+          </div>
+
+          <div style={{ marginTop: 22 }}>
+            <div className="card-title">Requested medicines</div>
+            <div className="card-description" style={{ margin: '5px 0 12px' }}>Review what was recorded before opening the WhatsApp draft.</div>
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Medicine / product</th><th>Requested quantity</th></tr></thead>
+                <tbody>
+                  {booking.items.map((item, index) => (
+                    <tr key={index}>
+                      <td>
+                        <div className="table-primary">{item.product_name}</div>
+                        <div className="table-secondary">{[item.strength, item.pack_size].filter(Boolean).join(' · ') || 'Details not specified'}</div>
+                      </td>
+                      <td>{item.requested_quantity} <span className="muted">{item.unit_label}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      ) : (
+        <div className="card-pad">
+          <div className="notice notice-amber">
+            The booking was saved, but its details could not be loaded for this read-only view. The WhatsApp action is kept disabled to avoid sending an incomplete confirmation. You can start a new booking or inspect the saved record from All bookings.
+          </div>
+        </div>
+      )}
+
+      <div className="sticky-actions quick-booking-actions">
+        {booking ? (
+          <WhatsAppDraftButton
+            bookingId={bookingId}
+            phone={booking.customerPhone}
+            message={message}
+            kind="booking_confirmation"
+            label="WhatsApp message"
+            allowed={booking.whatsappConsent && Boolean(booking.bookingCode)}
+          />
+        ) : (
+          <button type="button" className="btn btn-primary" disabled title="Booking details have not loaded">↗ WhatsApp message</button>
+        )}
+        <button type="button" className="btn btn-primary quick-save-button" onClick={onNewBooking}>＋ New booking</button>
+      </div>
+    </section>
+  );
+}
+
 
 export default function BookingForm() {
   const [state, action, pending] = useActionState(createBookingAction, {} as ActionState);
@@ -14,6 +118,7 @@ export default function BookingForm() {
   const [advanceMethod, setAdvanceMethod] = useState('Cash');
   const [whatsappConsent, setWhatsappConsent] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
+  const [confirmed, setConfirmed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const phoneRef = useRef<HTMLInputElement>(null);
   const parsedAdvance = Number(advance || 0);
@@ -50,19 +155,22 @@ export default function BookingForm() {
       return;
     }
 
+    setConfirmed(true);
     setToastVisible(true);
-    const timer = window.setTimeout(() => {
-      setToastVisible(false);
-      formRef.current?.reset();
-      setLines([blankLine()]);
-      setAdvance('0');
-      setAdvanceMethod('Cash');
-      setWhatsappConsent('');
-      window.requestAnimationFrame(() => phoneRef.current?.focus());
-    }, 2400);
-
+    const timer = window.setTimeout(() => setToastVisible(false), 2400);
     return () => window.clearTimeout(timer);
   }, [state]);
+
+  const startNewBooking = () => {
+    setConfirmed(false);
+    setToastVisible(false);
+    setLines([blankLine()]);
+    setAdvance('0');
+    setAdvanceMethod('Cash');
+    setWhatsappConsent('');
+    formRef.current?.reset();
+    window.requestAnimationFrame(() => phoneRef.current?.focus());
+  };
 
   const updateLine = (index: number, key: keyof QuickLine, value: string) => {
     setLines((current) => current.map((line, i) => (i === index ? { ...line, [key]: value } : line)));
@@ -75,12 +183,14 @@ export default function BookingForm() {
           <div className="booking-success-icon">✓</div>
           <div className="booking-success-copy">
             <strong>{state.error ? "Booking not saved" : "Booking has been noted"}</strong>
-            <span>{state.error || "Booking saved successfully. The form will reset shortly for the next customer."}</span>
-            {state.bookingId && <a href={'/bookings/' + state.bookingId}>View booking details →</a>}
+            <span>{state.error || "Booking saved. This read-only confirmation stays on screen until you choose New booking."}</span>
           </div>
         </div>
       )}
 
+      {confirmed ? (
+        <BookingReadOnly booking={state.booking} bookingId={state.bookingId || ''} onNewBooking={startNewBooking} />
+      ) : (
       <form
         ref={formRef}
         action={action}
@@ -259,11 +369,18 @@ export default function BookingForm() {
 
         <div className="sticky-actions quick-booking-actions">
           <a className="btn btn-secondary" href="/bookings">All bookings</a>
+          <button
+            className="btn btn-primary"
+            type="button"
+            disabled
+            title="Confirm the booking first. WhatsApp stays unavailable unless the customer agreed."
+          >↗ WhatsApp message</button>
           <button className="btn btn-primary quick-save-button" type="submit" disabled={pending}>
-            {pending ? 'Saving booking…' : '✓ Save booking'}
+            {pending ? 'Confirming booking…' : '✓ Confirm booking'}
           </button>
         </div>
       </form>
+      )}
     </>
   );
 }
