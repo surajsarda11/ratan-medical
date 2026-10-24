@@ -12,7 +12,7 @@ export type BookingSnapshot = {
   customerPhone: string;
   status: string;
   createdAt: string;
-  whatsappConsent: boolean;
+  whatsappConsent: boolean | null;
   items: Array<{
     product_name: string;
     requested_quantity: number;
@@ -70,7 +70,6 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   const phone = normalizeIndianMobile(phoneInput);
   const notes = String(formData.get('notes') || '').trim();
   const prescriptionVerified = formData.get('prescription_verified') === 'on';
-  const whatsappConsent = String(formData.get('whatsapp_consent') || '').trim();
   const advanceText = String(formData.get('advance_amount') || '0').trim();
   const advance = Number(advanceText || 0);
   const method = String(formData.get('advance_method') || 'Cash');
@@ -79,7 +78,6 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   catch { return { error: 'The medicine list could not be read. Please review the medicine rows.' }; }
 
   if (!phone) return { error: 'Enter a valid Indian mobile number: 10 digits, or include +91.' };
-  if (!['yes', 'no'].includes(whatsappConsent)) return { error: 'Record whether the customer agreed to WhatsApp messages.' };
   if (!Number.isFinite(advance) || advance < 0 || advance > 10000000) return { error: 'Advance must be a valid amount of ₹0 or more.' };
   if (!Array.isArray(items) || items.length < 1 || items.length > 20) return { error: 'Add between 1 and 20 medicine lines.' };
 
@@ -98,7 +96,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     return { error: 'Each medicine needs a product name and quantity greater than zero.' };
   }
 
-  const { data, error } = await supabase.rpc('create_booking_with_consent', {
+  const { data, error } = await supabase.rpc('create_booking_with_items', {
     p_customer_name: customerName || null,
     p_customer_phone: phone,
     p_expected_arrival_date: null,
@@ -107,7 +105,6 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
     p_advance: advance,
     p_advance_method: method,
     p_items: validItems,
-    p_whatsapp_consent: whatsappConsent === 'yes',
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
 
@@ -144,7 +141,7 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
       customerPhone: String(savedBooking.customer_phone || phone),
       status: String(savedBooking.status || 'Awaiting Stock'),
       createdAt: String(savedBooking.created_at || new Date().toISOString()),
-      whatsappConsent: savedBooking.whatsapp_consent === true,
+      whatsappConsent: typeof savedBooking.whatsapp_consent === 'boolean' ? savedBooking.whatsapp_consent : null,
       items: (savedItems || []).map((item: any) => ({
         product_name: String(item.product_name || ''),
         requested_quantity: Number(item.requested_quantity || 0),
