@@ -7,7 +7,7 @@ export default function NewBookingPage() {
         <div>
           <div className="kicker">COUNTER WORKFLOW</div>
           <h1>Quick booking</h1>
-          <p>Record the customer number, medicine request and any advance paid. After saving, the form resets for the next customer.</p>
+          <p>Confirm the customer number, medicine request and any advance paid. The saved booking becomes read-only; open WhatsApp only when the customer has agreed, then choose New booking for the next customer.</p>
         </div>
       </div>
       <BookingForm />
