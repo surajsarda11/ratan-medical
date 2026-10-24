@@ -462,8 +462,8 @@ export async function markWhatsAppOpenedAction(formData: FormData) {
   const bookingId = String(formData.get('booking_id') || '');
   const kind = String(formData.get('kind') || 'follow_up').slice(0,40);
   if (!bookingId) return;
-  const { data: booking } = await supabase.from('bookings').select('id,whatsapp_consent').eq('id', bookingId).eq('owner_id', user.id).maybeSingle();
-  if (!booking || booking.whatsapp_consent !== true) return;
+  const { data: booking } = await supabase.from('bookings').select('id').eq('id', bookingId).eq('owner_id', user.id).maybeSingle();
+  if (!booking) return;
   const { error: updateError } = await supabase.from('bookings').update({ last_whatsapp_draft_opened_at: new Date().toISOString() }).eq('id', bookingId).eq('owner_id', user.id);
   if (updateError) return;
   await supabase.from('booking_events').insert({ owner_id: user.id, booking_id: bookingId, event_type: 'whatsapp_draft_opened', summary: `WhatsApp ${kind} draft opened; send status not confirmed`, payload: { send_status: 'opened_not_confirmed' }, actor_user_id: user.id });
