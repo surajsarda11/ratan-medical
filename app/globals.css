@@ -400,3 +400,27 @@ tbody tr:hover { background: #fbfdfb; }
   .topbar-right { gap: 7px; }
   .sidebar.sidebar-expanded { width: 210px; flex-basis: 210px; }
 }
+
+
+/* Make unavailable actions visibly inactive instead of showing the active primary colour. */
+.btn:disabled,
+button.btn:disabled {
+  cursor: not-allowed;
+  background: #e7ebe8;
+  border-color: #d7ded9;
+  color: #87928a;
+  box-shadow: none;
+  opacity: 1;
+}
+.btn-primary:disabled:hover,
+button.btn-primary:disabled:hover {
+  background: #e7ebe8;
+  border-color: #d7ded9;
+  color: #87928a;
+}
+.btn-secondary:disabled:hover,
+button.btn-secondary:disabled:hover {
+  background: #e7ebe8;
+  border-color: #d7ded9;
+  color: #87928a;
+}
