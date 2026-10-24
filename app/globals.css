@@ -329,3 +329,74 @@ tbody tr:hover { background: #fbfdfb; }
   .booking-filter-clear { justify-self: stretch; width: 100%; }
   .booking-row-action-wrap { min-width: 190px; }
 }
+
+
+/* User-controlled workspace navigation. Tablet starts compact by default; the top-bar toggle can override it. */
+.sidebar-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #fff;
+  color: #28553b;
+  font-size: 11px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: border-color .15s ease, background .15s ease;
+}
+.sidebar-toggle:hover { border-color: #9fbea8; background: #f8fcf9; }
+.sidebar-toggle:focus-visible { outline: 3px solid #80b991; outline-offset: 2px; }
+.sidebar-toggle > span:first-child { font-size: 16px; line-height: 1; }
+
+/* Explicitly expanded mode overrides the responsive compact-sidebar rules above. */
+.sidebar.sidebar-expanded {
+  width: 250px;
+  flex: 0 0 250px;
+  padding: 22px 14px;
+}
+.sidebar.sidebar-expanded .brand {
+  padding: 0 10px 25px;
+  justify-content: flex-start;
+  border-bottom: 1px solid #ffffff25;
+}
+.sidebar.sidebar-expanded .brand-copy,
+.sidebar.sidebar-expanded .nav-caption,
+.sidebar.sidebar-expanded .nav-label,
+.sidebar.sidebar-expanded .sidebar-user,
+.sidebar.sidebar-expanded .logout-label { display: block; }
+.sidebar.sidebar-expanded .nav-link { justify-content: flex-start; padding: 10px 12px; }
+.sidebar.sidebar-expanded .logout-button { width: 100%; padding: 9px 10px; font-size: 13px; }
+.sidebar.sidebar-expanded .sidebar-bottom { padding: 14px 8px 0; }
+
+/* Explicitly compact mode also works on larger laptop screens. */
+.sidebar.sidebar-collapsed {
+  width: 72px;
+  flex: 0 0 72px;
+  padding: 16px 8px;
+}
+.sidebar.sidebar-collapsed .brand {
+  padding: 0 4px 20px;
+  justify-content: center;
+  border: 0;
+}
+.sidebar.sidebar-collapsed .brand-copy,
+.sidebar.sidebar-collapsed .nav-caption,
+.sidebar.sidebar-collapsed .nav-label,
+.sidebar.sidebar-collapsed .sidebar-user,
+.sidebar.sidebar-collapsed .logout-label { display: none; }
+.sidebar.sidebar-collapsed .nav-link { justify-content: center; padding: 12px 5px; }
+.sidebar.sidebar-collapsed .nav-icon { font-size: 18px; }
+.sidebar.sidebar-collapsed .logout-button { padding: 10px 5px; font-size: 16px; }
+.sidebar.sidebar-collapsed .sidebar-bottom { padding: 12px 0 0; }
+
+@media (max-width: 560px) {
+  .sidebar-toggle { min-height: 34px; padding: 7px 9px; }
+  .sidebar-toggle > span:last-child { display: none; }
+  .topbar-right { gap: 7px; }
+  .sidebar.sidebar-expanded { width: 210px; flex-basis: 210px; }
+}
