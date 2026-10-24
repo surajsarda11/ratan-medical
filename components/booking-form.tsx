@@ -50,7 +50,7 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
               <div className="money-row"><span className="muted">Mobile number</span><b>{booking.customerPhone}</b></div>
               <div className="money-row"><span className="muted">Booking status</span><span className="status status-amber">{booking.status}</span></div>
               <div className="money-row"><span className="muted">Created</span><b>{new Date(booking.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}</b></div>
-              <div className="money-row"><span className="muted">WhatsApp permission</span><span className={booking.whatsappConsent ? 'status status-green' : 'status status-red'}>{booking.whatsappConsent ? 'Agreed' : 'Not agreed'}</span></div>
+              <div className="money-row"><span className="muted">WhatsApp permission</span><span className={booking.whatsappConsent === true ? 'status status-green' : booking.whatsappConsent === false ? 'status status-red' : 'status status-amber'}>{booking.whatsappConsent === true ? 'Agreed' : booking.whatsappConsent === false ? 'Not agreed' : 'Not recorded'}</span></div>
             </section>
 
             <section className="card card-pad" style={{ boxShadow: 'none' }}>
@@ -104,6 +104,7 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
         ) : (
           <button type="button" className="btn btn-primary" disabled title="Booking details have not loaded">↗ WhatsApp message</button>
         )}
+        <a className="btn btn-secondary" href={`/bookings/${bookingId}`}>View booking details</a>
         <button type="button" className="btn btn-primary quick-save-button" onClick={onNewBooking}>＋ New booking</button>
       </div>
     </section>
@@ -116,7 +117,6 @@ export default function BookingForm() {
   const [lines, setLines] = useState<QuickLine[]>([blankLine()]);
   const [advance, setAdvance] = useState('0');
   const [advanceMethod, setAdvanceMethod] = useState('Cash');
-  const [whatsappConsent, setWhatsappConsent] = useState('');
   const [toastVisible, setToastVisible] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
@@ -167,7 +167,6 @@ export default function BookingForm() {
     setLines([blankLine()]);
     setAdvance('0');
     setAdvanceMethod('Cash');
-    setWhatsappConsent('');
     formRef.current?.reset();
     window.requestAnimationFrame(() => phoneRef.current?.focus());
   };
@@ -214,23 +213,6 @@ export default function BookingForm() {
               pattern="[+0-9 ()-]{10,20}"
               maxLength={20}
             />
-          </div>
-
-          <div className="field quick-consent-field">
-            <label htmlFor="whatsapp_consent">Customer permission for WhatsApp *</label>
-            <select
-              className="select"
-              id="whatsapp_consent"
-              name="whatsapp_consent"
-              value={whatsappConsent}
-              onChange={(event) => setWhatsappConsent(event.target.value)}
-              required
-            >
-              <option value="">Select the customer's choice</option>
-              <option value="yes">Customer agreed</option>
-              <option value="no">Customer did not agree</option>
-            </select>
-            <small>Ask the customer first. Select “Customer agreed” only after they explicitly say yes. This choice is deliberately left unselected until you confirm their preference.</small>
           </div>
 
           <div className="quick-booking-main">
