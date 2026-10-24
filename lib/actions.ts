@@ -6,7 +6,32 @@ import { createClient } from '@/lib/supabase/server';
 import { invoiceFingerprint } from '@/lib/invoice-fingerprint';
 import { normalizeIndianMobile } from '@/lib/phone-number';
 
-export type ActionState = { error?: string; success?: string; bookingId?: string };
+export type BookingSnapshot = {
+  bookingCode: string;
+  customerName: string | null;
+  customerPhone: string;
+  status: string;
+  createdAt: string;
+  whatsappConsent: boolean;
+  items: Array<{
+    product_name: string;
+    requested_quantity: number;
+    unit_label: string;
+    strength: string | null;
+    pack_size: string | null;
+  }>;
+  advance: number;
+  advanceMethod: string | null;
+  shopName: string;
+  footer: string;
+};
+
+export type ActionState = {
+  error?: string;
+  success?: string;
+  bookingId?: string;
+  booking?: BookingSnapshot;
+};
 
 async function requireUser() {
   const supabase = await createClient();
@@ -39,7 +64,7 @@ export async function logoutAction() {
 }
 
 export async function createBookingAction(_: ActionState, formData: FormData): Promise<ActionState> {
-  const { supabase } = await requireUser();
+  const { supabase, user } = await requireUser();
   const customerName = String(formData.get('customer_name') || '').trim();
   const phoneInput = String(formData.get('customer_phone') || '').trim();
   const phone = normalizeIndianMobile(phoneInput);
@@ -86,10 +111,62 @@ export async function createBookingAction(_: ActionState, formData: FormData): P
   });
   if (error || !data) return { error: safeError(error, 'Could not save this booking. Check the database migration and try again.') };
 
+  const bookingId = String(data);
+  const [
+    { data: savedBooking, error: bookingReadError },
+    { data: savedItems, error: itemReadError },
+    { data: savedPayments, error: paymentReadError },
+    { data: settings },
+  ] = await Promise.all([
+    supabase.from('bookings')
+      .select('id,booking_code,customer_name,customer_phone,status,created_at,whatsapp_consent')
+      .eq('id', bookingId).eq('owner_id', user.id).maybeSingle(),
+    supabase.from('booking_items')
+      .select('product_name,requested_quantity,unit_label,strength,pack_size')
+      .eq('booking_id', bookingId).eq('owner_id', user.id).order('created_at'),
+    supabase.from('payments')
+      .select('payment_type,amount,method')
+      .eq('booking_id', bookingId).eq('owner_id', user.id),
+    supabase.from('shop_settings')
+      .select('shop_name,default_footer')
+      .eq('owner_id', user.id).maybeSingle(),
+  ]);
+
+  let booking: BookingSnapshot | undefined;
+  if (savedBooking && !bookingReadError && !itemReadError) {
+    const advancePayments = (savedPayments || []).filter((payment: any) => payment.payment_type === 'advance');
+    const recordedAdvance = paymentReadError
+      ? advance
+      : advancePayments.reduce((total: number, payment: any) => total + Number(payment.amount || 0), 0);
+    booking = {
+      bookingCode: String(savedBooking.booking_code || ''),
+      customerName: savedBooking.customer_name ? String(savedBooking.customer_name) : null,
+      customerPhone: String(savedBooking.customer_phone || phone),
+      status: String(savedBooking.status || 'Awaiting Stock'),
+      createdAt: String(savedBooking.created_at || new Date().toISOString()),
+      whatsappConsent: savedBooking.whatsapp_consent === true,
+      items: (savedItems || []).map((item: any) => ({
+        product_name: String(item.product_name || ''),
+        requested_quantity: Number(item.requested_quantity || 0),
+        unit_label: String(item.unit_label || 'packs'),
+        strength: item.strength == null ? null : String(item.strength),
+        pack_size: item.pack_size == null ? null : String(item.pack_size),
+      })),
+      advance: recordedAdvance,
+      advanceMethod: advancePayments[0]?.method ? String(advancePayments[0].method) : (advance > 0 ? method : null),
+      shopName: String(settings?.shop_name || 'Ratan Medical Hall'),
+      footer: String(settings?.default_footer || 'Regards,\nRatan Medical Hall'),
+    };
+  }
+
   revalidatePath('/dashboard');
   revalidatePath('/bookings');
   revalidatePath('/ready');
-  return { success: 'Booking saved successfully.', bookingId: String(data) };
+  return {
+    success: 'Booking confirmed and saved.',
+    bookingId,
+    booking,
+  };
 }
 export async function updateWhatsAppConsentAction(formData: FormData) {
   const { supabase } = await requireUser();
