@@ -50,7 +50,6 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
               <div className="money-row"><span className="muted">Mobile number</span><b>{booking.customerPhone}</b></div>
               <div className="money-row"><span className="muted">Booking status</span><span className="status status-amber">{booking.status}</span></div>
               <div className="money-row"><span className="muted">Created</span><b>{new Date(booking.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}</b></div>
-              <div className="money-row"><span className="muted">WhatsApp permission</span><span className={booking.whatsappConsent === true ? 'status status-green' : booking.whatsappConsent === false ? 'status status-red' : 'status status-amber'}>{booking.whatsappConsent === true ? 'Agreed' : booking.whatsappConsent === false ? 'Not agreed' : 'Not recorded'}</span></div>
             </section>
 
             <section className="card card-pad" style={{ boxShadow: 'none' }}>
@@ -92,15 +91,23 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
       )}
 
       <div className="sticky-actions quick-booking-actions">
-        {booking ? (
+        {booking && booking.whatsappConsent === true && Boolean(booking.bookingCode) ? (
           <WhatsAppDraftButton
             bookingId={bookingId}
             phone={booking.customerPhone}
             message={message}
             kind="booking_confirmation"
             label="WhatsApp message"
-            allowed={booking.whatsappConsent === true && Boolean(booking.bookingCode)}
+            allowed
           />
+        ) : booking ? (
+          <a
+            className="btn btn-primary"
+            href={`/bookings/${bookingId}`}
+            title="Record the customer's WhatsApp choice on booking details to enable messaging"
+          >
+            ↗ Enable WhatsApp message
+          </a>
         ) : (
           <button type="button" className="btn btn-primary" disabled title="Booking details have not loaded">↗ WhatsApp message</button>
         )}
