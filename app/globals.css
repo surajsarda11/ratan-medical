@@ -278,3 +278,54 @@ tbody tr:hover { background: #fbfdfb; }
 
 .booking-success-popup.booking-error { border-color: #edc5c1; }
 .booking-success-popup.booking-error .booking-success-icon { background: #a6382f; }
+
+
+/* Counter-friendly booking register: summary filters, clear actions and responsive layout. */
+.booking-register { display: grid; gap: 17px; min-width: 0; }
+.booking-register-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+.booking-register-stat { appearance: none; text-align: left; display: grid; gap: 7px; min-width: 0; padding: 16px 18px; border: 1px solid var(--line); border-radius: 14px; background: #fff; color: var(--ink); cursor: pointer; transition: border-color .15s ease, box-shadow .15s ease, transform .15s ease; }
+.booking-register-stat:hover { border-color: #a9c8b3; box-shadow: 0 5px 16px #123b2808; transform: translateY(-1px); }
+.booking-register-stat-active { border-color: #76a889; box-shadow: inset 0 0 0 1px #76a889; background: #f8fcf9; }
+.booking-register-stat-label { color: #66786b; font-size: 11px; font-weight: 750; }
+.booking-register-stat strong { color: var(--forest); font-size: 25px; line-height: 1.1; letter-spacing: -.7px; }
+.booking-register-stat-foot { color: #929e95; font-size: 10px; }
+.booking-register-card { overflow: hidden; }
+.booking-register-header { padding: 18px 20px; }
+.booking-register-filters { display: grid; grid-template-columns: minmax(250px, 1fr) minmax(170px, .42fr) minmax(150px, .35fr) auto; gap: 12px; align-items: end; padding: 16px 20px; border-bottom: 1px solid var(--line); background: #fbfdfb; }
+.booking-register-filters .field > span { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; font-weight: 800; color: #64756a; }
+.booking-register-filters .input, .booking-register-filters .select { min-height: 42px; font-size: 12px; }
+.booking-filter-clear { min-height: 42px; }
+.booking-register-table-wrap { overflow-x: auto; }
+.booking-register-table { min-width: 1050px; }
+.booking-register-table th { padding: 13px 14px; }
+.booking-register-table td { padding: 14px; }
+.booking-register-reference { display: grid; gap: 4px; justify-items: start; }
+.booking-register-phone { display: inline-block; margin-top: 5px; color: #37684a; font-size: 11px; font-weight: 650; text-decoration: underline; text-decoration-color: #b5d0bd; text-underline-offset: 3px; overflow-wrap: anywhere; }
+.booking-register-phone:hover { color: var(--forest); text-decoration-color: currentColor; }
+.booking-register-quantity { color: var(--forest); font-weight: 800; }
+.booking-register-money { white-space: nowrap; font-weight: 750; color: #2c4c36; }
+.booking-register-row-cancelled td { background: #fcfafa; }
+.booking-register-row-cancelled .table-primary { color: #7b817d; }
+.booking-row-action-wrap { display: grid; gap: 7px; min-width: 200px; }
+.booking-row-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; }
+.booking-row-actions form { margin: 0; }
+.booking-row-actions .btn { min-height: 31px; }
+.btn-call { border-color: #cae6d3; color: #216b40; background: #edf9f1; }
+.btn-call:hover { border-color: #8fc4a0; background: #e2f4e8; }
+.booking-action-message { font-size: 10px; line-height: 1.45; max-width: 290px; }
+.booking-action-error { color: #a2352c; }
+.booking-action-success { color: #226c42; }
+@media (max-width: 1050px) {
+  .booking-register-filters { grid-template-columns: minmax(220px, 1fr) minmax(165px, .55fr); }
+  .booking-filter-clear { justify-self: start; }
+}
+@media (max-width: 760px) {
+  .booking-register-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+  .booking-register-stat { padding: 13px 14px; }
+  .booking-register-stat strong { font-size: 22px; }
+  .booking-register-header { align-items: flex-start; flex-direction: column; }
+  .booking-register-header > .btn { width: 100%; }
+  .booking-register-filters { grid-template-columns: minmax(0, 1fr); padding: 14px; }
+  .booking-filter-clear { justify-self: stretch; width: 100%; }
+  .booking-row-action-wrap { min-width: 190px; }
+}

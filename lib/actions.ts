@@ -200,6 +200,61 @@ export async function updateBookingStatusAction(formData: FormData) {
   redirect(`/bookings/${id}?status=updated&value=${encodeURIComponent(status)}`);
 }
 
+export async function cancelBookingFromListAction(_: ActionState, formData: FormData): Promise<ActionState> {
+  const { supabase, user } = await requireUser();
+  const bookingId = String(formData.get('booking_id') || '').trim();
+  if (!bookingId) return { error: 'Choose a booking to cancel.' };
+
+  const { data: booking, error: bookingError } = await supabase
+    .from('bookings')
+    .select('id,status')
+    .eq('id', bookingId)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+  if (bookingError || !booking) return { error: 'Booking not found. Refresh the bookings list and try again.' };
+  if (['Cancelled', 'Returned / Refunded'].includes(booking.status)) {
+    return { error: 'This booking is already cancelled or returned.' };
+  }
+  if (booking.status === 'Completed') {
+    return { error: 'A completed booking cannot be cancelled from the register. Sale returns need a separate audited workflow.' };
+  }
+
+  const [
+    { data: items, error: itemError },
+    { data: settlements, error: settlementError },
+  ] = await Promise.all([
+    supabase.from('booking_items')
+      .select('collected_quantity')
+      .eq('booking_id', bookingId)
+      .eq('owner_id', user.id),
+    supabase.from('settlements')
+      .select('id')
+      .eq('booking_id', bookingId)
+      .eq('owner_id', user.id)
+      .limit(1),
+  ]);
+  if (itemError || settlementError) {
+    return { error: 'Could not verify pickup history. Refresh the booking and try again.' };
+  }
+  if ((items || []).some((item: any) => Number(item.collected_quantity || 0) > 0) || (settlements || []).length > 0) {
+    return { error: 'This booking has pickup or settlement history and cannot be cancelled here. Open the booking to review its status and payment history.' };
+  }
+
+  const { error } = await supabase.rpc('set_booking_status', {
+    p_booking_id: bookingId,
+    p_status: 'Cancelled',
+  });
+  if (error) return { error: safeError(error, 'Could not cancel this booking. Refresh the list and try again.') };
+
+  revalidatePath('/bookings');
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath('/dashboard');
+  revalidatePath('/ready');
+  revalidatePath('/reminders');
+  return {
+    success: 'Booking marked Cancelled. The record and audit history were kept. Check the payment ledger if an advance needs to be refunded.',
+  };
+}
 export async function addPaymentAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const bookingId = String(formData.get('booking_id') || '');

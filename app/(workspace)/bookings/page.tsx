@@ -9,5 +9,5 @@ export default async function BookingsPage() {
   ]);
   const advances: Record<string,number> = {};
   (payments||[]).forEach((p:any)=>{ advances[p.booking_id]=(advances[p.booking_id]||0)+Number(p.amount||0); });
-  return <><div className="page-heading"><div><div className="kicker">ORDER REGISTER</div><h1>All bookings</h1><p>Search by booking ID, customer, phone, medicine name, strength or pack size. Filter by status and date.</p></div></div><BookingsTable bookings={bookings||[]} advancesByBooking={advances} /></>;
+  return <><div className="page-heading"><div><div className="kicker">ORDER REGISTER</div><h1>All bookings</h1><p>Find bookings quickly, call customers directly, and cancel eligible uncollected requests while keeping the booking and audit history.</p></div></div><BookingsTable bookings={bookings||[]} advancesByBooking={advances} /></>;
 }
