@@ -99,7 +99,7 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
             message={message}
             kind="booking_confirmation"
             label="WhatsApp message"
-            allowed={booking.whatsappConsent && Boolean(booking.bookingCode)}
+            allowed={booking.whatsappConsent === true && Boolean(booking.bookingCode)}
           />
         ) : (
           <button type="button" className="btn btn-primary" disabled title="Booking details have not loaded">↗ WhatsApp message</button>
