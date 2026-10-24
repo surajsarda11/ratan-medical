@@ -50,7 +50,6 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
               <div className="money-row"><span className="muted">Mobile number</span><b>{booking.customerPhone}</b></div>
               <div className="money-row"><span className="muted">Booking status</span><span className="status status-amber">{booking.status}</span></div>
               <div className="money-row"><span className="muted">Created</span><b>{new Date(booking.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Kolkata' })}</b></div>
-              <div className="money-row"><span className="muted">WhatsApp permission</span><span className={booking.whatsappConsent === true ? 'status status-green' : booking.whatsappConsent === false ? 'status status-red' : 'status status-amber'}>{booking.whatsappConsent === true ? 'Agreed' : booking.whatsappConsent === false ? 'Not agreed' : 'Not recorded'}</span></div>
             </section>
 
             <section className="card card-pad" style={{ boxShadow: 'none' }}>
