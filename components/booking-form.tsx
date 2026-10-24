@@ -91,15 +91,23 @@ function BookingReadOnly({ booking, bookingId, onNewBooking }: {
       )}
 
       <div className="sticky-actions quick-booking-actions">
-        {booking ? (
+        {booking && booking.whatsappConsent === true && Boolean(booking.bookingCode) ? (
           <WhatsAppDraftButton
             bookingId={bookingId}
             phone={booking.customerPhone}
             message={message}
             kind="booking_confirmation"
             label="WhatsApp message"
-            allowed={booking.whatsappConsent === true && Boolean(booking.bookingCode)}
+            allowed
           />
+        ) : booking ? (
+          <a
+            className="btn btn-primary"
+            href={`/bookings/${bookingId}`}
+            title="Record the customer's WhatsApp choice on booking details to enable messaging"
+          >
+            ↗ Enable WhatsApp message
+          </a>
         ) : (
           <button type="button" className="btn btn-primary" disabled title="Booking details have not loaded">↗ WhatsApp message</button>
         )}
