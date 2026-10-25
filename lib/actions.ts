@@ -188,7 +188,7 @@ export async function updateBookingStatusAction(formData: FormData) {
   const status = String(formData.get('status') || '');
   const allowed = ['Awaiting Stock','Partially Received','Ready for Pickup','Partially Collected','Completed','Cancelled','Returned / Refunded'];
   if (!id || !allowed.includes(status)) redirect('/bookings');
-  const { error } = await supabase.rpc('set_booking_status', { p_booking_id: id, p_status: status });
+  const { error } = await supabase.rpc('set_booking_status_manual', { p_booking_id: id, p_status: status });
   if (error) {
     const statusCode = /Ready for Pickup/i.test(error.message) ? 'needs_stock' : /Completed/i.test(error.message) ? 'needs_pickup' : 'error';
     redirect(`/bookings/${id}?status=${statusCode}`);
