@@ -137,6 +137,10 @@ export default function BookingsTable({ bookings, advancesByBooking = {} }: { bo
                           status={booking.status}
                           canCancel={false}
                         />
+                        <div className="booking-row-actions" style={{marginTop:6,flexWrap:'wrap'}}>
+                          <WhatsAppDraftButton bookingId={booking.id} phone={booking.customer_phone} kind="order_received" label="WhatsApp: Received" message={'*Ratan Medical Hall*\nOrder received\nBooking ID: '+booking.booking_code+'\n\nWe have received your medicine order and are checking availability. We will update you shortly.\n\nRegards,\nRatan Medical Hall'} />
+                          <WhatsAppDraftButton bookingId={booking.id} phone={booking.customer_phone} kind="delivered_adjustment" label="WhatsApp: Delivered" message={'*Ratan Medical Hall*\nOrder delivered & advance adjusted\nBooking ID: '+booking.booking_code+'\n\nYour medicine order has been delivered/collected. Your advance has been adjusted against the final bill. Please contact us if you need payment details.\n\nRegards,\nRatan Medical Hall'} />
+                        </div>
                       </td>
                     </tr>
                   );
