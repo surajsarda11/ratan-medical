@@ -461,15 +461,54 @@ export async function deleteBookingAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const bookingId = String(formData.get('booking_id') || '');
   if (!bookingId) redirect('/bookings?delete=error');
-  const { data: booking } = await supabase.from('bookings').select('id').eq('id', bookingId).eq('owner_id', user.id).maybeSingle();
-  if (!booking) redirect('/bookings?delete=error');
-  for (const table of ['reminders','booking_events','settlements','payments','booking_items']) {
-    const { error } = await supabase.from(table).delete().eq('booking_id', bookingId).eq('owner_id', user.id);
+
+  const { data: booking } = await supabase.from('bookings')
+    .select('id,booking_code')
+    .eq('id', bookingId)
+    .eq('owner_id', user.id)
+    .maybeSingle();
+  if (!booking) redirect('/bookings?delete=not-found');
+
+  // Resolve dependent IDs first; the allocation tables intentionally preserve
+  // financial history by default, so delete their rows explicitly in order.
+  const [{ data: items, error: itemsReadError }, { data: payments, error: paymentsReadError }, { data: settlements, error: settlementsReadError }] = await Promise.all([
+    supabase.from('booking_items').select('id').eq('booking_id', bookingId).eq('owner_id', user.id),
+    supabase.from('payments').select('id').eq('booking_id', bookingId).eq('owner_id', user.id),
+    supabase.from('settlements').select('id').eq('booking_id', bookingId).eq('owner_id', user.id),
+  ]);
+  if (itemsReadError || paymentsReadError || settlementsReadError) redirect('/bookings?delete=error');
+
+  const itemIds = (items || []).map((row: {id:string}) => row.id);
+  const paymentIds = (payments || []).map((row: {id:string}) => row.id);
+  const settlementIds = (settlements || []).map((row: {id:string}) => row.id);
+
+  // Allocation records have restrictive foreign keys, so clear them before
+  // their parent payment, settlement, or booking-item records.
+  for (const [table, column, ids] of [
+    ['refund_allocations', 'payment_id', paymentIds],
+    ['refund_allocations', 'settlement_id', settlementIds],
+    ['settlement_payment_allocations', 'payment_id', paymentIds],
+    ['settlement_payment_allocations', 'settlement_id', settlementIds],
+    ['receipt_allocations', 'booking_item_id', itemIds],
+    ['purchase_import_rows', 'booking_item_id', itemIds],
+  ] as Array<[string, string, string[]]>) {
+    if (!ids.length) continue;
+    const { error } = await supabase.from(table).delete().eq('owner_id', user.id).in(column, ids);
     if (error) redirect('/bookings?delete=error');
   }
-  const { error } = await supabase.from('bookings').delete().eq('id', bookingId).eq('owner_id', user.id);
+
+  // Items, payments, settlements, reminders and events cascade from bookings
+  // after the restrictive allocation references above have been removed.
+  const { error } = await supabase.from('bookings').delete()
+    .eq('id', bookingId)
+    .eq('owner_id', user.id);
   if (error) redirect('/bookings?delete=error');
-  revalidatePath('/bookings'); revalidatePath('/dashboard'); revalidatePath('/ready'); revalidatePath('/settlements'); revalidatePath('/reminders');
+
+  revalidatePath('/bookings');
+  revalidatePath('/dashboard');
+  revalidatePath('/ready');
+  revalidatePath('/settlements');
+  revalidatePath('/reminders');
   redirect('/bookings?delete=success');
 }
 
