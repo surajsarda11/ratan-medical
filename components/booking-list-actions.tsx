@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useActionState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { cancelBookingFromListAction, type ActionState } from '@/lib/actions';
+import { cancelBookingFromListAction, deleteBookingAction, type ActionState } from '@/lib/actions';
 
 export default function BookingListActions({
   bookingId,
@@ -40,6 +40,12 @@ export default function BookingListActions({
         <Link className="btn btn-secondary btn-small" href={`/bookings/${bookingId}`}>
           Open →
         </Link>
+        <form action={deleteBookingAction} onSubmit={(event) => {
+          if (!window.confirm("Permanently delete this booking and its related records? This cannot be undone.")) event.preventDefault();
+        }}>
+          <input type="hidden" name="booking_id" value={bookingId} />
+          <button className="btn btn-danger btn-small" type="submit">Delete</button>
+        </form>
         {canCancel && status !== 'Cancelled' && (
           <form
             action={formAction}
