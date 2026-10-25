@@ -457,6 +457,22 @@ export async function createFollowupReminderAction(formData: FormData) {
   redirect('/reminders?reminder=created');
 }
 
+export async function deleteBookingAction(formData: FormData) {
+  const { supabase, user } = await requireUser();
+  const bookingId = String(formData.get('booking_id') || '');
+  if (!bookingId) redirect('/bookings?delete=error');
+  const { data: booking } = await supabase.from('bookings').select('id').eq('id', bookingId).eq('owner_id', user.id).maybeSingle();
+  if (!booking) redirect('/bookings?delete=error');
+  for (const table of ['reminders','booking_events','settlements','payments','booking_items']) {
+    const { error } = await supabase.from(table).delete().eq('booking_id', bookingId).eq('owner_id', user.id);
+    if (error) redirect('/bookings?delete=error');
+  }
+  const { error } = await supabase.from('bookings').delete().eq('id', bookingId).eq('owner_id', user.id);
+  if (error) redirect('/bookings?delete=error');
+  revalidatePath('/bookings'); revalidatePath('/dashboard'); revalidatePath('/ready'); revalidatePath('/settlements'); revalidatePath('/reminders');
+  redirect('/bookings?delete=success');
+}
+
 export async function markWhatsAppOpenedAction(formData: FormData) {
   const { supabase, user } = await requireUser();
   const bookingId = String(formData.get('booking_id') || '');
