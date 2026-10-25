@@ -6,8 +6,9 @@ import { dateTimeLabel, inr, statusClass } from '@/lib/format';
 import { bookingConfirmationMessage } from '@/lib/messages';
 import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
 
-export default async function BookingDetailPage({ params }: { params: Promise<{id:string}> }) {
+export default async function BookingDetailPage({ params, searchParams }: { params: Promise<{id:string}>; searchParams: Promise<{status?:string; value?:string}> }) {
   const { id } = await params;
+  const query = await searchParams;
   const supabase = await createClient();
   const [{ data: booking }, { data: items }, { data: payments }, { data: settlements }, { data: events }, { data: reminders }, { data: settings }] = await Promise.all([
     supabase.from('bookings').select('*').eq('id',id).maybeSingle(),
@@ -28,6 +29,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{i
   const anyUnverified = medicineItems.some((item:any)=>Number(item.collected_quantity)<Number(item.received_quantity)&&(!item.mrp_verified||!item.verified_mrp));
   const contactWasOpened = (events||[]).some((event:any)=>event.event_type==='whatsapp_draft_opened');
   return <>
+    {query.status === 'updated' ? <div className="notice notice-neutral" role="status">Order status updated to {query.value || 'the selected status'}.</div> : query.status === 'needs_stock' ? <div className="notice notice-amber" role="alert">Cannot set Ready for Pickup until all requested stock quantities have been received and no pickup has started.</div> : query.status === 'needs_pickup' ? <div className="notice notice-amber" role="alert">Cannot mark Completed until all requested quantities have been collected.</div> : query.status === 'error' ? <div className="notice notice-amber" role="alert">Status could not be updated. The selected status may conflict with the current receipt/pickup history or the database migration may be missing. Please refresh and try again.</div> : null}
     <div className="page-heading"><div><div className="kicker">BOOKING DETAIL / {booking.booking_code}</div><h1>{booking.customer_name || 'Customer booking'}</h1><p>{booking.customer_phone} · Created {dateTimeLabel(booking.created_at)} · Booking ID {booking.booking_code}</p></div><div className="inline-form"><Link href="/bookings" className="btn btn-secondary">← All bookings</Link><Link href={`/bookings/${id}/settlement`} className="btn btn-primary">Record pickup / settlement →</Link><form action={deleteBookingAction} onSubmit={undefined}><input type="hidden" name="booking_id" value={id}/><button className="btn btn-danger" type="submit">Delete booking</button></form></div></div>
     <div className="grid-2" style={{alignItems:'start'}}>
       <div className="stack">
