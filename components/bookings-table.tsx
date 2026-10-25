@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useMemo, useState } from 'react';
 import { dateLabel, inr, statusClass } from '@/lib/format';
 import BookingListActions from '@/components/booking-list-actions';
+import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
 
 const bookingStatuses = [
   'Awaiting Stock',
@@ -68,7 +69,7 @@ export default function BookingsTable({ bookings, advancesByBooking = {} }: { bo
         <div className="card-header booking-register-header">
           <div>
             <div className="card-title">Booking register</div>
-            <div className="card-description">{filtered.length} shown of {bookings.length} records · Call customers, review details or cancel eligible bookings.</div>
+            <div className="card-description">{filtered.length} shown of {bookings.length} records · Call customers, open order details or prepare WhatsApp updates.</div>
           </div>
           <Link href="/bookings/new" className="btn btn-primary">＋ New booking</Link>
         </div>
@@ -101,7 +102,7 @@ export default function BookingsTable({ bookings, advancesByBooking = {} }: { bo
         {filtered.length ? (
           <div className="table-wrap booking-register-table-wrap">
             <table className="booking-register-table">
-              <thead><tr><th>Booking</th><th>Customer</th><th>Medicine request</th><th>Received</th><th>Advance</th><th>Status</th><th>Actions</th></tr></thead>
+              <thead><tr><th>Booking</th><th>Customer</th><th>Medicine request</th><th>Received</th><th>Advance</th><th>Actions</th></tr></thead>
               <tbody>
                 {filtered.map((booking: any) => {
                   const items = booking.booking_items || [];
@@ -128,14 +129,13 @@ export default function BookingsTable({ bookings, advancesByBooking = {} }: { bo
                       </td>
                       <td><span className="booking-register-quantity">{received}</span><span className="muted"> / {requested}</span></td>
                       <td className="booking-register-money">{inr(advancesByBooking[booking.id] || 0)}</td>
-                      <td><span className={statusClass(booking.status)}>{booking.status}</span></td>
                       <td>
                         <BookingListActions
                           bookingId={booking.id}
                           bookingCode={booking.booking_code}
                           phone={booking.customer_phone}
                           status={booking.status}
-                          canCancel={canCancel}
+                          canCancel={false}
                         />
                       </td>
                     </tr>
