@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
-import { addPaymentAction, createFollowupReminderAction, markWhatsAppSentAction, updateBookingStatusAction, updateWhatsAppConsentAction, verifyItemMrpAction } from '@/lib/actions';
+import { addPaymentAction, createFollowupReminderAction, deleteBookingAction, markWhatsAppSentAction, updateBookingStatusAction, updateWhatsAppConsentAction, verifyItemMrpAction } from '@/lib/actions';
 import { dateTimeLabel, inr, statusClass } from '@/lib/format';
 import { bookingConfirmationMessage } from '@/lib/messages';
 import WhatsAppDraftButton from '@/components/whatsapp-draft-button';
@@ -28,7 +28,7 @@ export default async function BookingDetailPage({ params }: { params: Promise<{i
   const anyUnverified = medicineItems.some((item:any)=>Number(item.collected_quantity)<Number(item.received_quantity)&&(!item.mrp_verified||!item.verified_mrp));
   const contactWasOpened = (events||[]).some((event:any)=>event.event_type==='whatsapp_draft_opened');
   return <>
-    <div className="page-heading"><div><div className="kicker">BOOKING DETAIL / {booking.booking_code}</div><h1>{booking.customer_name || 'Customer booking'}</h1><p>{booking.customer_phone} · Created {dateTimeLabel(booking.created_at)} · Booking ID {booking.booking_code}</p></div><div className="inline-form"><Link href="/bookings" className="btn btn-secondary">← All bookings</Link><Link href={`/bookings/${id}/settlement`} className="btn btn-primary">Record pickup / settlement →</Link></div></div>
+    <div className="page-heading"><div><div className="kicker">BOOKING DETAIL / {booking.booking_code}</div><h1>{booking.customer_name || 'Customer booking'}</h1><p>{booking.customer_phone} · Created {dateTimeLabel(booking.created_at)} · Booking ID {booking.booking_code}</p></div><div className="inline-form"><Link href="/bookings" className="btn btn-secondary">← All bookings</Link><Link href={`/bookings/${id}/settlement`} className="btn btn-primary">Record pickup / settlement →</Link><form action={deleteBookingAction} onSubmit={undefined}><input type="hidden" name="booking_id" value={id}/><button className="btn btn-danger" type="submit">Delete booking</button></form></div></div>
     <div className="grid-2" style={{alignItems:'start'}}>
       <div className="stack">
         <section className="card">
