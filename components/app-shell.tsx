@@ -9,7 +9,6 @@ const nav = [
   { href: '/dashboard', icon: '▦', label: 'Dashboard' },
   { href: '/bookings/new', icon: '＋', label: 'New Booking' },
   { href: '/bookings', icon: '▤', label: 'All Bookings' },
-  { href: '/imports', icon: '⇧', label: 'Purchase CSV Import' },
   { href: '/ready', icon: '✓', label: 'Ready for Pickup' },
   { href: '/settlements', icon: '₹', label: 'Settlements' },
   { href: '/reminders', icon: '◷', label: 'Reminder History' },
